@@ -1,5 +1,5 @@
 {
-  "name": "quill-ui-test",
+  "name": "example-dynamic-text-editor",
   "private": true,
   "version": "0.0.0",
   "type": "module",

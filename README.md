@@ -145,10 +145,11 @@ The production-ready files will be available in the `dist` directory.
 ├── src/                    # Source code for the library
 │   ├── components/         # React components
 │   ├── hooks/              # Custom React hooks
-│   └── utils/              # Utility functions
-├── tests/                  # Test files
+|   |---index               # 
+│   └── styles/             # Basic CSS for default Editors
 ├── dist/                   # Built files (after running build)
-├── Dynamic-Text-Editor-Test/ # Test application
+|
+├── example/                # Test application
 │   ├── package.json        # Test app configuration
 │   ├── src/                # Test app source code
 │   │   ├── components/     # Test app components
