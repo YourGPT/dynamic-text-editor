@@ -1,0 +1,47 @@
+@import 'quill/dist/quill.snow.css';
+@import 'quill/dist/quill.bubble.css';
+
+.quill-ui-editor {
+    display: flex;
+    flex-direction: column;
+}
+
+.quill-ui-editor .editor-content {
+    flex: 1;
+    min-height: 150px;
+}
+
+/* Hide duplicate toolbars */
+.quill-ui-editor .ql-toolbar+.ql-toolbar {
+    display: none;
+}
+
+/* Ensure placeholder is properly positioned */
+.quill-ui-editor .ql-editor.ql-blank::before {
+    font-style: italic;
+    position: absolute;
+    left: 15px;
+    pointer-events: none;
+}
+
+/* Bubble theme styles */
+.theme-bubble .editor-content {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 12px;
+    transition: border-color 0.2s ease;
+}
+
+.theme-bubble .editor-content:hover {
+    border-color: #999;
+}
+
+.theme-bubble .editor-content:focus-within {
+    border-color: #06c;
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+}
+
+/* Adjust bubble toolbar position */
+.theme-bubble .ql-bubble .ql-tooltip {
+    z-index: 1000;
+}

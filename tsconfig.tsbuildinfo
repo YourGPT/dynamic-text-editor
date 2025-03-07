@@ -1,1 +1,0 @@
-{"root":["./src/index.ts","./src/vite-env.d.ts","./src/backup/components/aiprompteditor.tsx","./src/backup/types/monaco.d.ts","./src/backup/utils/completions.ts","./src/backup/utils/language.ts","./src/backup/utils/theme.ts","./src/components/draftprompteditor.tsx","./src/components/icons/docsicon.tsx","./src/types/editor.ts","./src/utils/constants.ts"],"version":"5.6.3"}

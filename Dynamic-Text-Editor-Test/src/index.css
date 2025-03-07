@@ -1,0 +1,76 @@
+@import "tailwindcss";
+@import 'quill/dist/quill.snow.css';
+@import 'quill/dist/quill.bubble.css';
+
+Quill editor specific styles
+.ql-toolbar.ql-snow {
+    @apply border-gray-200 rounded-t-lg bg-gray-50;
+}
+
+.ql-container.ql-snow {
+    @apply border-gray-200 rounded-b-lg;
+}
+
+.ql-editor {
+    @apply min-h-[200px] bg-white;
+}
+
+.ql-editor.ql-blank::before {
+    @apply text-gray-400 font-normal italic;
+}
+
+.editor-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 1rem;
+}
+
+.editor-controls {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.editor-controls button {
+    padding: 0.5rem 1rem;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.editor-controls button:hover {
+    background-color: #e5e7eb;
+    border-color: #9ca3af;
+}
+
+.editor-controls button:active {
+    background-color: #d1d5db;
+}
+
+.editors-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.editor-wrapper {
+    margin-bottom: 2rem;
+}
+
+.editor-wrapper h2 {
+    margin-bottom: 1rem;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+/* Add some spacing between editors */
+.editor-wrapper+.editor-wrapper {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #eee;
+}

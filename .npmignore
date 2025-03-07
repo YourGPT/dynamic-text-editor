@@ -1,9 +1,0 @@
-src/
-scripts/
-.github/
-.vscode/
-.eslintrc
-.prettierrc
-tsconfig.json
-vite.config.ts
-*.log
