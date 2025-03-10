@@ -20,7 +20,6 @@ export default defineConfig({
       output: {
         globals: {
           tslib: "tslib",
-          "@emotion/is-prop-valid": "isPropValid",
         },
       },
     },
