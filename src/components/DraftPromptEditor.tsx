@@ -278,59 +278,61 @@ const DraftPromptEditor: ForwardRefRenderFunction<DraftPromptEditorRef, DraftPro
   };
 
   return (
-    <EditorWrapper className={`${className || ""} ${classNames?.root || ""}`} onClick={() => editorRef.current?.focus()}>
-      <Editor
-        ref={editorRef}
-        editorState={editorState}
-        onChange={handleEditorChange}
-        handleBeforeInput={handleBeforeInput}
-        handlePastedText={handlePastedText}
-        handleKeyCommand={handleKeyCommand}
-        keyBindingFn={keyBindingFn}
-        placeholder={placeholder}
-      />
-      {showSuggestions && (
-        <SuggestionsBox
-          ref={suggestionsRef}
-          className={classNames?.suggestions}
-          style={{
-            top: suggestionPosition.top + 20,
-            left: suggestionPosition.left,
-            maxHeight: suggestionPosition.maxHeight,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {suggestions.map((suggestion: BaseEditorItem, index: number) => (
-            <SuggestionItem
-              key={index}
-              onClick={() => handleSuggestionClick(suggestion)}
-              $isSelected={index === selectedSuggestionIndex}
-              className={`${classNames?.suggestion || ""} ${index === selectedSuggestionIndex ? classNames?.suggestionSelected || "" : ""}`}
-              onMouseEnter={() => setSelectedSuggestionIndex(index)}
-            >
-              <SuggestionContent>
-                <SuggestionLabel>
-                  <span>{suggestion.value}</span>
-                  {suggestion.link ? (
-                    <CategoryLink href={suggestion.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                      {suggestion.category}
-                    </CategoryLink>
-                  ) : (
-                    <SuggestionCategory className={classNames?.category}>{suggestion.category}</SuggestionCategory>
-                  )}
-                </SuggestionLabel>
-                <SuggestionDescription className={classNames?.description}>{suggestion.description}</SuggestionDescription>
-              </SuggestionContent>
-              {suggestion.docs && (
-                <DocsLink href={suggestion.docs} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                  Docs
-                </DocsLink>
-              )}
-            </SuggestionItem>
-          ))}
-        </SuggestionsBox>
-      )}
-    </EditorWrapper>
+    <>
+      <EditorWrapper className={`${className || ""} ${classNames?.root || ""}`} onClick={() => editorRef.current?.focus()}>
+        <Editor
+          ref={editorRef}
+          editorState={editorState}
+          onChange={handleEditorChange}
+          handleBeforeInput={handleBeforeInput}
+          handlePastedText={handlePastedText}
+          handleKeyCommand={handleKeyCommand}
+          keyBindingFn={keyBindingFn}
+          placeholder={placeholder}
+        />
+        {showSuggestions && (
+          <SuggestionsBox
+            ref={suggestionsRef}
+            className={classNames?.suggestions}
+            style={{
+              top: suggestionPosition.top + 20,
+              left: suggestionPosition.left,
+              maxHeight: suggestionPosition.maxHeight,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {suggestions.map((suggestion: BaseEditorItem, index: number) => (
+              <SuggestionItem
+                key={index}
+                onClick={() => handleSuggestionClick(suggestion)}
+                $isSelected={index === selectedSuggestionIndex}
+                className={`${classNames?.suggestion || ""} ${index === selectedSuggestionIndex ? classNames?.suggestionSelected || "" : ""}`}
+                onMouseEnter={() => setSelectedSuggestionIndex(index)}
+              >
+                <SuggestionContent>
+                  <SuggestionLabel>
+                    <span>{suggestion.value}</span>
+                    {suggestion.link ? (
+                      <CategoryLink href={suggestion.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                        {suggestion.category}
+                      </CategoryLink>
+                    ) : (
+                      <SuggestionCategory className={classNames?.category}>{suggestion.category}</SuggestionCategory>
+                    )}
+                  </SuggestionLabel>
+                  <SuggestionDescription className={classNames?.description}>{suggestion.description}</SuggestionDescription>
+                </SuggestionContent>
+                {suggestion.docs && (
+                  <DocsLink href={suggestion.docs} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                    Docs
+                  </DocsLink>
+                )}
+              </SuggestionItem>
+            ))}
+          </SuggestionsBox>
+        )}
+      </EditorWrapper>
+    </>
   );
 };
 
