@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { DraftPromptEditor, DraftPromptEditorRef } from "../../src";
-import { defaultSuggestions } from "../../src/utils/constants";
-import "./App.css";
+import { useState, useRef, useEffect } from "react";
+import { DraftPromptEditor, DraftPromptEditorRef } from "dynamic-text-editor";
+import { defaultSuggestions } from "./constants";
 
 function App() {
   const [promptValue, setPromptValue] = useState<string>("Hello {{VISITOR.name}}, welcome to {{CONTACT.company}}!");

@@ -1,16 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ContentBlock } from "draft-js";
+import { Editor } from "draft-js";
 
 export interface BaseEditorItem {
-  id?: string | number;
-  label: string;
   value: string;
-  category: string;
+  label: string;
   description: string;
+  category: string;
+  type: "function" | "variable";
   link?: string;
-  icon?: string;
-  type?: string;
-  [key: string]: any; // Allow additional properties
+  docs?: string;
 }
 
 export interface EditorClassNames {
@@ -23,14 +21,22 @@ export interface EditorClassNames {
   description: string;
 }
 
-export interface EditorRenderProps {
-  renderItem?: (item: BaseEditorItem, isSelected: boolean) => React.ReactNode;
-  renderCategory?: (item: BaseEditorItem) => React.ReactNode;
-  renderDescription?: (item: BaseEditorItem) => React.ReactNode;
+export interface DraftPromptEditorProps {
+  value: string;
+  onChange: (value: string) => void;
+  suggestions: BaseEditorItem[];
+  className?: string;
+  classNames?: Partial<EditorClassNames>;
+  placeholder?: string;
 }
 
-export interface ContentBlockType extends ContentBlock {
-  getText(): string;
+export interface DraftPromptEditorRef {
+  focus: () => void;
+  getEditor: () => Editor | null;
 }
+
+export type ContentBlockType = {
+  getText: () => string;
+};
 
 export type FindEntityCallback = (start: number, end: number) => void;

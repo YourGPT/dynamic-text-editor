@@ -22,31 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# Build
-build
-dist
-# Env
-.env
-
-package-lock.json
-
-# Demo
-dist-demo
-
-# TypeScript
-*.tsbuildinfo
-dist/
-
-# Development
-node_modules/
-.turbo/
-
-# Editor
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store

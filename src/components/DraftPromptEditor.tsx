@@ -1,21 +1,8 @@
 import { useEffect, useRef, useState, useMemo, forwardRef, useImperativeHandle } from "react";
+import type { ForwardRefRenderFunction, ReactElement } from "react";
 import { Editor, EditorState, CompositeDecorator, Modifier, SelectionState, ContentState, DraftHandleValue, getDefaultKeyBinding } from "draft-js";
 import { styled } from "styled-components";
-import { BaseEditorItem, ContentBlockType, EditorClassNames, FindEntityCallback } from "../types/editor";
-
-interface DraftPromptEditorProps {
-  value: string;
-  onChange: (value: string) => void;
-  suggestions: BaseEditorItem[];
-  className?: string;
-  classNames?: Partial<EditorClassNames>;
-  placeholder?: string;
-}
-
-export interface DraftPromptEditorRef {
-  focus: () => void;
-  getEditor: () => Editor | null;
-}
+import { ContentBlockType, FindEntityCallback, DraftPromptEditorProps, BaseEditorItem, DraftPromptEditorRef } from "../types/editor";
 
 function findVariableEntities(contentBlock: ContentBlockType, callback: FindEntityCallback) {
   const text = contentBlock.getText();
@@ -30,7 +17,9 @@ const VariableSpan: React.FC<{ children: React.ReactNode; className?: string }> 
   return <span className={`variable ${className || ""}`}>{children}</span>;
 };
 
-const DraftPromptEditor = forwardRef<DraftPromptEditorRef, DraftPromptEditorProps>(({ value, onChange, suggestions: options, placeholder, className, classNames }, ref) => {
+const DraftPromptEditor: ForwardRefRenderFunction<DraftPromptEditorRef, DraftPromptEditorProps> = (props, ref): ReactElement => {
+  const { value, onChange, suggestions: options, placeholder, className, classNames } = props;
+
   const decorator = useMemo(
     () =>
       new CompositeDecorator([
@@ -160,7 +149,7 @@ const DraftPromptEditor = forwardRef<DraftPromptEditorRef, DraftPromptEditorProp
 
     if (match) {
       const searchText = match[0].replace(/^\{\{/, "").toLowerCase();
-      const filtered = options.filter((item) => item.value.toLowerCase().includes(searchText));
+      const filtered = options.filter((item: BaseEditorItem) => item.value.toLowerCase().includes(searchText));
 
       setSuggestions(filtered);
       setSelectedSuggestionIndex(0);
@@ -311,7 +300,7 @@ const DraftPromptEditor = forwardRef<DraftPromptEditorRef, DraftPromptEditorProp
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {suggestions.map((suggestion, index) => (
+          {suggestions.map((suggestion: BaseEditorItem, index: number) => (
             <SuggestionItem
               key={index}
               onClick={() => handleSuggestionClick(suggestion)}
@@ -343,7 +332,7 @@ const DraftPromptEditor = forwardRef<DraftPromptEditorRef, DraftPromptEditorProp
       )}
     </EditorWrapper>
   );
-});
+};
 
 function getCaretCoordinates(): { top: number; left: number } | null {
   const selection = window.getSelection();
@@ -354,7 +343,7 @@ function getCaretCoordinates(): { top: number; left: number } | null {
   return { top: rect.top, left: rect.left };
 }
 
-export default DraftPromptEditor;
+export default forwardRef<DraftPromptEditorRef, DraftPromptEditorProps>(DraftPromptEditor);
 
 // Styled components
 const EditorWrapper = styled.div`

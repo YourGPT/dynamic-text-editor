@@ -18,6 +18,22 @@ A flexible and customizable prompt editor for React applications with variable s
 npm install dynamic-prompt-editor
 ```
 
+### Peer Dependencies
+
+This library requires the following peer dependencies:
+
+- react: ^16.8 || ^17.0 || ^18.0
+- react-dom: ^16.8 || ^17.0 || ^18.0
+- styled-components: ^6.0.0
+
+If you haven't already, you'll need to install these in your project:
+
+```bash
+npm install styled-components
+```
+
+Note: React and React DOM are typically already installed in your project.
+
 ## Basic Usage
 
 ```tsx

@@ -1,4 +1,4 @@
-import { BaseEditorItem } from "../types/editor";
+import { BaseEditorItem } from "dynamic-text-editor";
 
 // export const defaultSuggestions: BaseEditorItem[] = [
 //   {
