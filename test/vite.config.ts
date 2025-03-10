@@ -16,7 +16,7 @@ export default defineConfig({
       include: [/dynamic-text-editor/, /node_modules/],
     },
     rollupOptions: {
-      external: ["tslib", "@emotion/is-prop-valid"],
+      external: ["tslib"],
       output: {
         globals: {
           tslib: "tslib",
