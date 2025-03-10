@@ -26,6 +26,6 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["tslib", "styled-components", "@emotion/is-prop-valid"],
+    include: ["tslib"],
   },
 });
