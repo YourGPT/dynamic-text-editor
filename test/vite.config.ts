@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     preserveSymlinks: true,
     alias: {
-      "dynamic-text-editor": path.resolve(__dirname, "../src"),
+      "dynamic-text-editor": path.resolve("../src"),
     },
   },
   build: {
@@ -16,10 +16,11 @@ export default defineConfig({
       include: [/dynamic-text-editor/, /node_modules/],
     },
     rollupOptions: {
-      external: ["tslib"],
+      external: ["tslib", "@emotion/is-prop-valid"],
       output: {
         globals: {
           tslib: "tslib",
+          "@emotion/is-prop-valid": "isPropValid",
         },
       },
     },
