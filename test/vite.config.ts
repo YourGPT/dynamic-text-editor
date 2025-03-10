@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import { resolve } from "path";
+import path from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     preserveSymlinks: true,
     alias: {
-      "dynamic-text-editor": resolve(__dirname, "../src"),
+      "dynamic-text-editor": path.resolve(__dirname, "../src"),
     },
   },
   build: {
@@ -16,15 +16,16 @@ export default defineConfig({
       include: [/dynamic-text-editor/, /node_modules/],
     },
     rollupOptions: {
-      external: ["tslib"],
+      external: ["tslib", "@emotion/is-prop-valid"],
       output: {
         globals: {
           tslib: "tslib",
+          "@emotion/is-prop-valid": "isPropValid",
         },
       },
     },
   },
   optimizeDeps: {
-    include: ["tslib", "styled-components"],
+    include: ["tslib", "styled-components", "@emotion/is-prop-valid"],
   },
 });
