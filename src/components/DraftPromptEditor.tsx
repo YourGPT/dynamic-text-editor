@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo, forwardRef, useImperativeHandle }
 import type { ForwardRefRenderFunction, ReactElement } from "react";
 import { Editor, EditorState, CompositeDecorator, Modifier, SelectionState, ContentState, DraftHandleValue, getDefaultKeyBinding } from "draft-js";
 import { styled } from "styled-components";
-import { ContentBlockType, FindEntityCallback, DraftPromptEditorProps, BaseEditorItem, DraftPromptEditorRef } from "../types/editor";
+import { ContentBlockType, FindEntityCallback, DraftPromptEditorProps, BaseEditorItem, DraftPromptEditorRef } from "./DynamicTextEditor/types/editor";
 
 function findVariableEntities(contentBlock: ContentBlockType, callback: FindEntityCallback) {
   const text = contentBlock.getText();

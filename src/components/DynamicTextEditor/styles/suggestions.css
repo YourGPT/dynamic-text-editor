@@ -1,0 +1,133 @@
+/* Suggestion Dropdown Container */
+.suggestions-dropdown {
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.08);
+    background-color: white;
+    border: 1px solid #e8e8e8;
+    overflow: hidden;
+    padding: 4px 0;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Basic styling for all suggestion items - both default and custom */
+.suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 1px solid #f0f0f0;
+    user-select: none;
+}
+
+/* Last item in the list */
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+/* Special hover style for both custom and default items - but only background */
+.suggestion-item:hover {
+    background-color: rgba(0, 120, 212, 0.05);
+}
+
+.suggestion-item.selected {
+    background-color: rgba(0, 120, 212, 0.1);
+}
+
+/* Border and transform styles ONLY for default suggestion items */
+.default-suggestion-item {
+    border-left: 3px solid transparent;
+}
+
+.default-suggestion-item.selected {
+    border-left: 3px solid rgba(0, 120, 212, 0.8);
+}
+
+.default-suggestion-item:hover:not(.selected) {
+    border-left: 3px solid rgba(0, 120, 212, 0.4);
+    transform: translateX(2px);
+}
+
+/* Special styling for custom rendered items - minimal styling */
+.custom-suggestion-item {
+    /* Only apply minimal styling to custom items */
+    background-color: transparent;
+}
+
+.custom-suggestion-item.selected {
+    background-color: rgba(0, 120, 212, 0.08);
+}
+
+.custom-suggestion-item:hover:not(.selected) {
+    background-color: rgba(0, 120, 212, 0.03);
+}
+
+/* Item content styling - only applies to default suggestions */
+.suggestion-item-content.default-suggestion {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.suggestion-item-label {
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.default-suggestion-item:hover .suggestion-item-label,
+.default-suggestion-item.selected .suggestion-item-label {
+    font-weight: 600;
+    color: #333;
+}
+
+.suggestion-item-description {
+    font-size: 0.9em;
+    color: #666;
+    transition: all 0.2s ease;
+}
+
+.default-suggestion-item:hover .suggestion-item-description,
+.default-suggestion-item.selected .suggestion-item-description {
+    color: #444;
+}
+
+.suggestion-item-category {
+    font-size: 0.8em;
+    color: #888;
+    transition: all 0.2s ease;
+}
+
+.default-suggestion-item:hover .suggestion-item-category,
+.default-suggestion-item.selected .suggestion-item-category {
+    color: #555;
+}
+
+/* Animation for dropdown appearance */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scrollbar styling */
+.suggestions-dropdown::-webkit-scrollbar {
+    width: 8px;
+}
+
+.suggestions-dropdown::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.suggestions-dropdown::-webkit-scrollbar-thumb {
+    background: #d1d1d1;
+    border-radius: 4px;
+}
+
+.suggestions-dropdown::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
