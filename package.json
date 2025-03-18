@@ -48,9 +48,13 @@
   },
   "dependencies": {
     "@types/draft-js": "^0.11.17",
+    "@types/showdown": "^2.0.6",
+    "@types/turndown": "^5.0.4",
     "draft-js": "^0.11.7",
+    "showdown": "^2.1.0",
     "styled-components": "^6.1.13",
-    "tslib": "^2.6.2"
+    "tslib": "^2.6.2",
+    "turndown": "^7.1.2"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",

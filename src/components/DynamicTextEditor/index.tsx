@@ -1,19 +1,49 @@
-import React, { forwardRef, type ForwardRefRenderFunction } from "react";
+import React, { forwardRef, type ForwardRefRenderFunction, useEffect, useState } from "react";
 import { useDynamicTextEditor } from "./hooks/useDynamicTextEditor";
 import type { DynamicTextEditorProps, DynamicTextEditorRef } from "./types";
 import Suggestions from "./Suggestions";
+import TurndownService from "turndown";
+import * as Showdown from "showdown";
 import "quill/dist/quill.snow.css";
 import "quill/dist/quill.bubble.css";
 import "./styles/editor.css";
 import "./styles/suggestions.css";
 
+// Create instances of converters
+const turndownService = new TurndownService();
+const showdownConverter = new Showdown.Converter({
+  simpleLineBreaks: true,
+  strikethrough: true,
+});
+
 const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, DynamicTextEditorProps> = (
   { className = "", classNames, suggestions, renderItem, value, onChange, minSuggestionWidth, maxSuggestionWidth, maxSuggestionHeight, ...props },
   ref
 ) => {
+  // Store the HTML representation of the Markdown internally
+  const [htmlValue, setHtmlValue] = useState(() => (value ? showdownConverter.makeHtml(value) : ""));
+
+  // Update HTML value when Markdown value changes externally
+  useEffect(() => {
+    if (value !== undefined) {
+      const newHtml = showdownConverter.makeHtml(value);
+      // setHtmlValue(newHtml);
+    }
+  }, [value]);
+
+  // Custom onChange handler to convert HTML back to Markdown
+  const handleChange = (html: string) => {
+    // setHtmlValue(html);
+    if (onChange) {
+      // Convert HTML to Markdown before calling onChange
+      const markdownContent = turndownService.turndown(html);
+      onChange(markdownContent);
+    }
+  };
+
   const { quillRef, quillInstance, editorState, setEditorState, clearContent, focus, blur, suggestionState, insertSuggestion } = useDynamicTextEditor({
-    value,
-    onChange,
+    value: htmlValue,
+    onChange: handleChange,
     suggestions,
     ...props,
   });
