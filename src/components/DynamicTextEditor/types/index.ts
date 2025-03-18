@@ -59,6 +59,7 @@ export interface DynamicTextEditorRef {
   focus: () => void;
   blur: () => void;
   containerRef: HTMLDivElement | null;
+  setValue: (value: string) => void;
 }
 
 export type ToolbarConfig = Array<

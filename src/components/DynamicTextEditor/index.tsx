@@ -23,17 +23,17 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   // Store the HTML representation of the Markdown internally
   const [htmlValue, setHtmlValue] = useState(() => (value ? showdownConverter.makeHtml(value) : ""));
 
-  // Update HTML value when Markdown value changes externally
+  // Set initial value only once
   useEffect(() => {
-    if (value !== undefined) {
+    if (value !== undefined && htmlValue === "") {
       const newHtml = showdownConverter.makeHtml(value);
-      // setHtmlValue(newHtml);
+      setHtmlValue(newHtml);
     }
-  }, [value]);
+  }, []);
 
   // Custom onChange handler to convert HTML back to Markdown
   const handleChange = (html: string) => {
-    // setHtmlValue(html);
+    setHtmlValue(html);
     if (onChange) {
       // Convert HTML to Markdown before calling onChange
       const markdownContent = turndownService.turndown(html);
@@ -48,6 +48,13 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
     ...props,
   });
 
+  // Method to programmatically set value
+  const setValue = (newValue: string) => {
+    const newHtml = showdownConverter.makeHtml(newValue);
+    setHtmlValue(newHtml);
+    setEditorState(newHtml);
+  };
+
   // Expose methods via ref
   React.useImperativeHandle(ref, () => ({
     quillInstance,
@@ -57,6 +64,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
     focus,
     blur,
     containerRef: quillRef.current,
+    setValue,
   }));
 
   return (
