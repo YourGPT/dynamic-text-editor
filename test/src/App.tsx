@@ -39,7 +39,7 @@ function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-6">
-            <section className="bg-card rounded-lg p-6 shadow-md">
+            <section className="bg-card rounded-lg p-6">
               <h3 className="text-lg font-medium mb-4">Editor</h3>
               <DynamicTextEditor
                 ref={editorRef}
@@ -53,7 +53,7 @@ function App() {
               />
             </section>
 
-            <section className="bg-card rounded-lg p-6 shadow-md">
+            <section className="bg-card rounded-lg p-6">
               <h4 className="text-base font-medium mb-3">Actions</h4>
               <button className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors" onClick={updateEditorContent}>
                 Update Editor Content
