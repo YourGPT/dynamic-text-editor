@@ -4,11 +4,9 @@ import type { DynamicTextEditorProps, DynamicTextEditorRef } from "./types";
 import Suggestions from "./Suggestions";
 import TurndownService from "turndown";
 import * as Showdown from "showdown";
-import "quill/dist/quill.snow.css";
-import "quill/dist/quill.bubble.css";
+//
 import "./styles/editor.css";
 import "./styles/suggestions.css";
-import "./styles/custom-toolbar.css";
 
 // Create instances of converters
 const turndownService = new TurndownService({

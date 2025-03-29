@@ -96,9 +96,7 @@ const useQuill = ({ container, theme = "snow", placeholder = "Write something...
         placeholder,
         readOnly,
         modules: {
-          ...(toolbar !== false && {
-            toolbar: toolbarConfig,
-          }),
+          toolbar: false,
           history: {
             userOnly: true,
           },
