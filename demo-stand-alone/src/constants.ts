@@ -1,4 +1,4 @@
-import { BaseEditorItem } from "dynamic-text-editor";
+import { BaseEditorItem } from "dynamic-prompt-editor";
 
 // export const defaultSuggestions: BaseEditorItem[] = [
 //   {
