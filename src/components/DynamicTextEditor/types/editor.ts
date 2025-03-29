@@ -21,20 +21,6 @@ export interface EditorClassNames {
   description: string;
 }
 
-export interface DraftPromptEditorProps {
-  value: string;
-  onChange: (value: string) => void;
-  suggestions: BaseEditorItem[];
-  className?: string;
-  classNames?: Partial<EditorClassNames>;
-  placeholder?: string;
-}
-
-export interface DraftPromptEditorRef {
-  focus: () => void;
-  getEditor: () => Editor | null;
-}
-
 export type ContentBlockType = {
   getText: () => string;
 };

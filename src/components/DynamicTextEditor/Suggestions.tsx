@@ -99,7 +99,6 @@ const DefaultSuggestionItem = styled(BaseSuggestionItem)`
 
   &:hover:not(.selected) {
     border-left: 3px solid hsl(var(--primary) / 0.4);
-    transform: translateX(2px);
   }
 `;
 
@@ -164,13 +163,13 @@ const EnhancedItem = styled.div`
   justify-content: space-between;
   gap: 8px;
 
-  &.selected {
+  /* &.selected {
     background-color: hsl(var(--primary) / 0.1);
-  }
-
+  } */
+  /* 
   &:hover {
     background-color: hsl(var(--primary) / 0.05);
-  }
+  } */
 
   &:last-child {
     border-bottom: none;
@@ -223,13 +222,8 @@ const CategoryLink = styled.a`
   gap: 4px;
   cursor: pointer;
   font-size: 0.875em;
-  background: hsl(var(--background) / 0.8);
   padding: 2px 8px;
   border-radius: 4px;
-
-  &:hover {
-    background: hsl(var(--primary) / 0.1);
-  }
 `;
 
 const SuggestionDescription = styled.div`
@@ -257,29 +251,99 @@ const EnhancedSuggestionItemComponent = ({
     category?: string;
     description?: string;
   };
-}) => (
-  <EnhancedItem className={`enhanced-suggestion-item ${isSelected ? "selected" : ""}`}>
-    <SuggestionContent>
-      <SuggestionLabel>
-        <span>{item.label}</span>
-        {item.category &&
-          (item.link ? (
-            <CategoryLink href={item.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={classNames?.category}>
-              {item.category}
-            </CategoryLink>
-          ) : (
-            <SuggestionCategory className={classNames?.category}>{item.category}</SuggestionCategory>
-          ))}
-      </SuggestionLabel>
-      {item.description && <SuggestionDescription className={classNames?.description}>{item.description}</SuggestionDescription>}
-    </SuggestionContent>
-    {item.docs && (
-      <DocsLink href={item.docs} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-        Docs
-      </DocsLink>
-    )}
-  </EnhancedItem>
-);
+}) => {
+  // Create a handler to stop propagation for links
+  const handleLinkClick = (e: React.MouseEvent, url?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Log for debugging
+    console.log("Link clicked:", url);
+
+    if (url) {
+      try {
+        // Force open in new tab without relying on window.open
+        const newTab = window.open("about:blank", "_blank");
+        if (newTab) {
+          newTab.location.href = url;
+          // Focus the new tab
+          newTab.focus();
+        } else {
+          // Fallback if popup is blocked
+          console.log("New tab blocked, creating link and clicking it");
+          const a = document.createElement("a");
+          a.href = url;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+          }, 100);
+        }
+      } catch (error) {
+        console.error("Error opening link:", error);
+        // Last resort fallback
+        window.open(url, "_blank");
+      }
+
+      // Prevent the dropdown from closing by stopping event propagation
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Return focus to editor after a short delay
+      setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 100);
+    }
+  };
+
+  return (
+    <EnhancedItem className={`enhanced-suggestion-item ${isSelected ? "selected" : ""}`}>
+      <SuggestionContent>
+        <SuggestionLabel>
+          <span>{item.label}</span>
+          {item.category &&
+            (item.link ? (
+              <CategoryLink
+                href={item.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => handleLinkClick(e, item.link)}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+                className={classNames?.category}
+              >
+                {item.category}
+              </CategoryLink>
+            ) : (
+              <SuggestionCategory className={classNames?.category}>{item.category}</SuggestionCategory>
+            ))}
+        </SuggestionLabel>
+        {item.description && <SuggestionDescription className={classNames?.description}>{item.description}</SuggestionDescription>}
+      </SuggestionContent>
+      {item.docs && (
+        <DocsLink
+          href={item.docs}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => handleLinkClick(e, item.docs)}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+        >
+          Docs
+        </DocsLink>
+      )}
+    </EnhancedItem>
+  );
+};
 
 export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, position, selectedIndex, onSelect, renderItem, classNames, maxHeight = 300, minWidth = 200, maxWidth = 400 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -387,6 +451,13 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
         e.preventDefault();
         e.stopPropagation();
 
+        // Check if the click came from a link element
+        const target = e.target as HTMLElement;
+        if (target.tagName === "A" || target.closest("a")) {
+          // If it's a link, don't select the item
+          return;
+        }
+
         // Defer selection to prevent focus issues
         handleItemSelect(item);
       } catch (error) {
@@ -408,6 +479,14 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
 
   // Prevent container events from propagating
   const handleContainerMouseDown = useCallback((e: React.MouseEvent) => {
+    // Check if the click was on a link
+    const target = e.target as HTMLElement;
+    if (target.tagName === "A" || target.closest("a")) {
+      // Let the link's own handler handle it
+      return;
+    }
+
+    // Otherwise prevent default for container clicks
     e.preventDefault();
     e.stopPropagation();
   }, []);

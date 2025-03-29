@@ -387,6 +387,43 @@ export const useSuggestions = ({ quillInstance, suggestions, trigger = "{{", clo
     };
   }, [quillInstance, handleEditorBlur]);
 
+  // Add this at the appropriate place where click events are handled to close the dropdown
+
+  // If the click handler exists, it would look something like this:
+  const handleDocumentClick = useCallback((e: MouseEvent) => {
+    // Check if the click was on a link
+    const target = e.target as HTMLElement;
+
+    // Don't close the dropdown if clicking on a link or link container
+    if (target.tagName === "A" || target.closest("a")) {
+      console.log("Click on link detected, keeping dropdown open");
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    // Check if clicking inside the suggestions dropdown
+    if (target.closest(".suggestions-dropdown")) {
+      console.log("Click inside dropdown detected, keeping open");
+      return;
+    }
+
+    // For any other click, close the dropdown
+    console.log("Outside click detected, closing dropdown");
+    setState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  // Add actual document click listener
+  useEffect(() => {
+    if (!state.isOpen) return;
+
+    document.addEventListener("mousedown", handleDocumentClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentClick);
+    };
+  }, [state.isOpen, handleDocumentClick]);
+
   return {
     suggestionState: {
       ...state,

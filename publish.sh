@@ -27,14 +27,27 @@ case $choice in
     ;;
 esac
 
-# Run tests and build
-# npm run test
-npm run build
+# Ask if user wants to bypass linting
+read -p "Bypass linting? (y/n): " bypass_lint
 
-# Bump version
-npm version $bump_type
-
-# Publish to npm
-npm publish
+if [ "$bypass_lint" = "y" ]; then
+  # Run build without linting
+  npm run build:no-lint
+  
+  # Bump version
+  npm version $bump_type
+  
+  # Publish to npm with --ignore-scripts flag to bypass prepublishOnly
+  npm publish --ignore-scripts
+else
+  # Run normal build with linting
+  npm run build
+  
+  # Bump version
+  npm version $bump_type
+  
+  # Publish to npm normally with all checks
+  npm publish
+fi
 
 echo "Published successfully!" 

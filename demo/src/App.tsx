@@ -47,8 +47,9 @@ function App() {
                 onChange={setPromptValue}
                 suggestions={defaultSuggestions}
                 classNames={{
-                  editor: "max-h-[400px] overflow-y-auto border border-border rounded-md p-3 bg-background/50",
+                  container: "max-h-[400px] overflow-y-auto border border-border rounded-md bg-background/50 [&>div]:p-4",
                 }}
+                className=""
                 showCustomToolbar
               />
             </section>

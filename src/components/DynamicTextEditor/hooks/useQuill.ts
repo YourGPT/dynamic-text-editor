@@ -72,7 +72,7 @@ const useQuill = ({ container, theme = "snow", placeholder = "Write something...
     initializedRef.current = true;
 
     // Clear the container and create editor element
-    container.current.innerHTML = '<div class="editor-content"></div>';
+    container.current.innerHTML = `<div class="editor-content"></div>`;
     const editorElement = container.current.querySelector(".editor-content");
 
     if (!editorElement) {

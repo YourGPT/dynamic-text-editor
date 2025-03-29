@@ -42,6 +42,7 @@ const EditorContent = styled.div`
   .ql-editor {
     padding: unset;
     color: hsl(var(--foreground));
+    outline: none;
   }
 
   .ql-editor.ql-blank::before {
@@ -272,7 +273,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   }));
 
   return (
-    <EditorContainer className={`dynamic-text-editor ${className} ${classNames?.root || ""}`}>
+    <EditorContainer className={`dynamic-text-editor ${className}`}>
       {showCustomToolbar && (
         <CustomToolbar className="dynamic-text-editor-custom-toolbar">
           <ToolbarButton type="button" onClick={handleBold} $active={formatState.bold} title="Bold">
@@ -290,7 +291,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
         </CustomToolbar>
       )}
 
-      <EditorContent ref={quillRef} className={`dynamic-text-editor-container ${classNames?.editor || ""}`} />
+      <EditorContent ref={quillRef} className={`dynamic-text-editor-container ${classNames?.container || ""}`} />
 
       <Suggestions
         isOpen={suggestionState.isOpen}

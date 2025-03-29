@@ -13,7 +13,7 @@ export interface BaseEditorItem {
 }
 
 export interface EditorClassNames {
-  root?: string;
+  container?: string;
   editor?: string;
   variable?: string;
   suggestions?: string;
