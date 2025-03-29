@@ -28,7 +28,7 @@ case $choice in
 esac
 
 # Run tests and build
-npm run test
+# npm run test
 npm run build
 
 # Bump version

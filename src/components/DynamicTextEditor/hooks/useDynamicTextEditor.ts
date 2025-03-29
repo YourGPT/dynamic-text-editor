@@ -80,7 +80,7 @@ export const useDynamicTextEditor = ({
 
   // Handle text change events
   const handleTextChange = useCallback(
-    (html: string, delta: any, source: string) => {
+    (html: string) => {
       // Skip if we're programmatically modifying
       if (isModifyingText.current) return;
 

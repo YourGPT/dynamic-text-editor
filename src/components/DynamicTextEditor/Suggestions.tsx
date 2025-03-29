@@ -237,7 +237,7 @@ const SuggestionDescription = styled.div`
   color: hsl(var(--foreground) / 0.7);
 `;
 
-const DefaultSuggestionItemComponent = ({ item, isSelected, isHovered }: { item: BaseEditorItem; isSelected: boolean; isHovered: boolean }) => (
+const DefaultSuggestionItemComponent = ({ item }: { item: BaseEditorItem; isSelected: boolean; isHovered: boolean }) => (
   <SuggestionItemContent className="default-suggestion">
     <SuggestionItemLabel>{item.label}</SuggestionItemLabel>
     {item.description && <SuggestionItemDescription>{item.description}</SuggestionItemDescription>}
@@ -248,7 +248,6 @@ const DefaultSuggestionItemComponent = ({ item, isSelected, isHovered }: { item:
 const EnhancedSuggestionItemComponent = ({
   item,
   isSelected,
-  isHovered,
   classNames,
 }: {
   item: BaseEditorItem;
