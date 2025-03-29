@@ -7,5 +7,6 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "installCommand": "cd demo && npm run use-published && npm install"
 }
