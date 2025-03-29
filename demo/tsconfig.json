@@ -19,6 +19,5 @@
       "dynamic-text-editor": ["../src"]
     }
   },
-  "include": ["src"],
-  "references": [{ "path": "../tsconfig.json" }]
+  "include": ["src"]
 }
