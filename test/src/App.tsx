@@ -29,9 +29,7 @@ function App() {
 
       <section className="mt-4">
         <h4 className="mb-2 text-sm font-medium">Current Value</h4>
-        <p className="text-gray-500 whitespace-pre" style={{ lineHeight: 1 }}>
-          {promptValue}
-        </p>
+        <p className="text-gray-500 whitespace-pre">{promptValue}</p>
       </section>
     </div>
   );

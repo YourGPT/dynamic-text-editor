@@ -10,7 +10,23 @@ import "./styles/editor.css";
 import "./styles/suggestions.css";
 
 // Create instances of converters
-const turndownService = new TurndownService();
+const turndownService = new TurndownService({
+  emDelimiter: "*",
+  strongDelimiter: "**",
+  hr: "---",
+  codeBlockStyle: "fenced",
+  bulletListMarker: "-",
+  headingStyle: "atx",
+});
+
+// Override paragraph rule to use single newlines instead of double
+turndownService.addRule("paragraph", {
+  filter: "p",
+  replacement: function (content) {
+    return content + "\n";
+  },
+});
+
 const showdownConverter = new Showdown.Converter({
   simpleLineBreaks: true,
   strikethrough: true,
