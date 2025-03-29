@@ -8,5 +8,5 @@
       "destination": "/index.html"
     }
   ],
-  "installCommand": "npm install && cd demo && npm run use-published && npm install"
+  "installCommand": "npm install --ignore-scripts && cd demo && npm install"
 }
