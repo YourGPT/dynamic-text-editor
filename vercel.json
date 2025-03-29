@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm -w run build:all",
-  "outputDirectory": "test/dist",
+  "buildCommand": "npm run build:demo",
+  "outputDirectory": "demo/dist",
   "framework": "vite",
   "rewrites": [
     {

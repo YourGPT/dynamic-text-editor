@@ -1,68 +1,70 @@
 {
-  "name": "dynamic-text-editor",
+  "name": "dynamic-prompt-editor",
   "version": "0.1.1",
-  "description": "Dynamic text editor component for React applications",
+  "private": false,
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
     "dist",
     "README.md"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
-    "./package.json": "./package.json"
-  },
   "scripts": {
-    "type-check": "tsc --noEmit",
-    "build": "pnpm type-check && bunchee src/index.ts --dts --target es2020",
-    "dev": "bunchee src/index.ts --watch --dts",
-    "dev:test": "pnpm --filter test dev",
-    "dev:all": "pnpm run -r --parallel dev",
-    "build:all": "pnpm build && pnpm --filter test build",
-    "format": "prettier --write .",
+    "dev": "vite --config demo/vite.config.ts --port 3004",
+    "build": "tsc -b && vite build",
+    "build:demo": "vite build --config demo/vite.config.ts",
+    "preview": "vite preview --config demo/vite.config.ts",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint",
+    "version": "npm run format && git add -A src",
+    "postversion": "git push && git push --tags",
     "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "test": "echo \"No tests specified\" && exit 0"
   },
-  "keywords": [
-    "react",
-    "text-editor",
-    "dynamic",
-    "editor"
-  ],
-  "author": "Your Name",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/dynamic-text-editor.git"
-  },
   "peerDependencies": {
-    "react": "^16.8 || ^17.0 || ^18.0",
-    "react-dom": "^16.8 || ^17.0 || ^18.0"
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
   "dependencies": {
     "@types/draft-js": "^0.11.17",
+    "@types/showdown": "^2.0.6",
+    "@types/turndown": "^5.0.5",
+    "ajv": "^8.17.1",
     "draft-js": "^0.11.7",
+    "path": "^0.12.7",
+    "quill": "^2.0.3",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "showdown": "^2.1.0",
     "styled-components": "^6.1.13",
-    "tslib": "^2.6.2"
+    "turndown": "^7.2.0",
+    "url": "^0.11.4"
   },
   "devDependencies": {
+    "@codemirror/autocomplete": "^6.18.4",
+    "@codemirror/commands": "^6.7.1",
+    "@codemirror/lang-javascript": "^6.2.2",
+    "@codemirror/language": "^6.10.8",
+    "@codemirror/lint": "^6.8.4",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.36.1",
+    "@eslint/js": "^9.17.0",
+    "@lezer/highlight": "^1.2.1",
+    "@monaco-editor/react": "^4.6.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "bunchee": "^5.1.5",
+    "@uiw/react-codemirror": "^4.23.7",
+    "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.17.0",
-    "prettier": "^2.5.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "turbo": "1.6",
-    "typescript": "~5.6.2"
-  },
-  "packageManager": "pnpm@8.8.0",
-  "sideEffects": false
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "monaco-editor": "^0.47.0",
+    "typescript": "~5.6.2",
+    "typescript-eslint": "^8.18.2",
+    "vite": "^6.0.5",
+    "vite-plugin-dts": "^4.4.0"
+  }
 }

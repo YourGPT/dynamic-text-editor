@@ -1,8 +1,21 @@
 import { useEffect, useRef, useState, useMemo, forwardRef, useImperativeHandle } from "react";
-import type { ForwardRefRenderFunction, ReactElement } from "react";
 import { Editor, EditorState, CompositeDecorator, Modifier, SelectionState, ContentState, DraftHandleValue, getDefaultKeyBinding } from "draft-js";
 import { styled } from "styled-components";
-import { ContentBlockType, FindEntityCallback, DraftPromptEditorProps, BaseEditorItem, DraftPromptEditorRef } from "../types/editor";
+import { BaseEditorItem, ContentBlockType, EditorClassNames, FindEntityCallback } from "../types/editor";
+
+interface DraftPromptEditorProps {
+  value: string;
+  onChange: (value: string) => void;
+  suggestions: BaseEditorItem[];
+  className?: string;
+  classNames?: Partial<EditorClassNames>;
+  placeholder?: string;
+}
+
+export interface DraftPromptEditorRef {
+  focus: () => void;
+  getEditor: () => Editor | null;
+}
 
 function findVariableEntities(contentBlock: ContentBlockType, callback: FindEntityCallback) {
   const text = contentBlock.getText();
@@ -17,9 +30,7 @@ const VariableSpan: React.FC<{ children: React.ReactNode; className?: string }> 
   return <span className={`variable ${className || ""}`}>{children}</span>;
 };
 
-const DraftPromptEditor: ForwardRefRenderFunction<DraftPromptEditorRef, DraftPromptEditorProps> = (props, ref): ReactElement => {
-  const { value, onChange, suggestions: options, placeholder, className, classNames } = props;
-
+const DraftPromptEditor = forwardRef<DraftPromptEditorRef, DraftPromptEditorProps>(({ value, onChange, suggestions: options, placeholder, className, classNames }, ref) => {
   const decorator = useMemo(
     () =>
       new CompositeDecorator([
@@ -149,7 +160,7 @@ const DraftPromptEditor: ForwardRefRenderFunction<DraftPromptEditorRef, DraftPro
 
     if (match) {
       const searchText = match[0].replace(/^\{\{/, "").toLowerCase();
-      const filtered = options.filter((item: BaseEditorItem) => item.value.toLowerCase().includes(searchText));
+      const filtered = options.filter((item) => item.value.toLowerCase().includes(searchText));
 
       setSuggestions(filtered);
       setSelectedSuggestionIndex(0);
@@ -278,63 +289,61 @@ const DraftPromptEditor: ForwardRefRenderFunction<DraftPromptEditorRef, DraftPro
   };
 
   return (
-    <>
-      <EditorWrapper className={`${className || ""} ${classNames?.root || ""}`} onClick={() => editorRef.current?.focus()}>
-        <Editor
-          ref={editorRef}
-          editorState={editorState}
-          onChange={handleEditorChange}
-          handleBeforeInput={handleBeforeInput}
-          handlePastedText={handlePastedText}
-          handleKeyCommand={handleKeyCommand}
-          keyBindingFn={keyBindingFn}
-          placeholder={placeholder}
-        />
-        {showSuggestions && (
-          <SuggestionsBox
-            ref={suggestionsRef}
-            className={classNames?.suggestions}
-            style={{
-              top: suggestionPosition.top + 20,
-              left: suggestionPosition.left,
-              maxHeight: suggestionPosition.maxHeight,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {suggestions.map((suggestion: BaseEditorItem, index: number) => (
-              <SuggestionItem
-                key={index}
-                onClick={() => handleSuggestionClick(suggestion)}
-                $isSelected={index === selectedSuggestionIndex}
-                className={`${classNames?.suggestion || ""} ${index === selectedSuggestionIndex ? classNames?.suggestionSelected || "" : ""}`}
-                onMouseEnter={() => setSelectedSuggestionIndex(index)}
-              >
-                <SuggestionContent>
-                  <SuggestionLabel>
-                    <span>{suggestion.value}</span>
-                    {suggestion.link ? (
-                      <CategoryLink href={suggestion.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                        {suggestion.category}
-                      </CategoryLink>
-                    ) : (
-                      <SuggestionCategory className={classNames?.category}>{suggestion.category}</SuggestionCategory>
-                    )}
-                  </SuggestionLabel>
-                  <SuggestionDescription className={classNames?.description}>{suggestion.description}</SuggestionDescription>
-                </SuggestionContent>
-                {suggestion.docs && (
-                  <DocsLink href={suggestion.docs} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                    Docs
-                  </DocsLink>
-                )}
-              </SuggestionItem>
-            ))}
-          </SuggestionsBox>
-        )}
-      </EditorWrapper>
-    </>
+    <EditorWrapper className={`${className || ""} ${classNames?.root || ""}`} onClick={() => editorRef.current?.focus()}>
+      <Editor
+        ref={editorRef}
+        editorState={editorState}
+        onChange={handleEditorChange}
+        handleBeforeInput={handleBeforeInput}
+        handlePastedText={handlePastedText}
+        handleKeyCommand={handleKeyCommand}
+        keyBindingFn={keyBindingFn}
+        placeholder={placeholder}
+      />
+      {showSuggestions && (
+        <SuggestionsBox
+          ref={suggestionsRef}
+          className={classNames?.suggestions}
+          style={{
+            top: suggestionPosition.top + 20,
+            left: suggestionPosition.left,
+            maxHeight: suggestionPosition.maxHeight,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {suggestions.map((suggestion, index) => (
+            <SuggestionItem
+              key={index}
+              onClick={() => handleSuggestionClick(suggestion)}
+              $isSelected={index === selectedSuggestionIndex}
+              className={`${classNames?.suggestion || ""} ${index === selectedSuggestionIndex ? classNames?.suggestionSelected || "" : ""}`}
+              onMouseEnter={() => setSelectedSuggestionIndex(index)}
+            >
+              <SuggestionContent>
+                <SuggestionLabel>
+                  <span>{suggestion.value}</span>
+                  {suggestion.link ? (
+                    <CategoryLink href={suggestion.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                      {suggestion.category}
+                    </CategoryLink>
+                  ) : (
+                    <SuggestionCategory className={classNames?.category}>{suggestion.category}</SuggestionCategory>
+                  )}
+                </SuggestionLabel>
+                <SuggestionDescription className={classNames?.description}>{suggestion.description}</SuggestionDescription>
+              </SuggestionContent>
+              {suggestion.docs && (
+                <DocsLink href={suggestion.docs} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                  Docs
+                </DocsLink>
+              )}
+            </SuggestionItem>
+          ))}
+        </SuggestionsBox>
+      )}
+    </EditorWrapper>
   );
-};
+});
 
 function getCaretCoordinates(): { top: number; left: number } | null {
   const selection = window.getSelection();
@@ -345,7 +354,7 @@ function getCaretCoordinates(): { top: number; left: number } | null {
   return { top: rect.top, left: rect.left };
 }
 
-export default forwardRef<DraftPromptEditorRef, DraftPromptEditorProps>(DraftPromptEditor);
+export default DraftPromptEditor;
 
 // Styled components
 const EditorWrapper = styled.div`
