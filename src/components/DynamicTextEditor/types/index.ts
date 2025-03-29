@@ -49,6 +49,7 @@ export interface DynamicTextEditorProps {
   onBlur?: () => void;
   defaultValue?: string;
   readOnly?: boolean;
+  showCustomToolbar?: boolean;
 }
 
 export interface DynamicTextEditorRef {

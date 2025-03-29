@@ -18,7 +18,7 @@ function App() {
     <div className="container mx-auto p-12">
       <h2 className="mb-6 text-lg font-medium">Dynamic Prompt Editor Demo</h2>
       <section className="max-h-[300px]">
-        <DynamicTextEditor ref={editorRef} value={promptValue} onChange={setPromptValue} suggestions={defaultSuggestions} classNames={{ editor: "max-h-[300px] overflow-y-auto" }} />
+        <DynamicTextEditor ref={editorRef} value={promptValue} onChange={setPromptValue} suggestions={defaultSuggestions} classNames={{ editor: "max-h-[300px] overflow-y-auto" }} showCustomToolbar />
       </section>
 
       <section className="mt-4">
