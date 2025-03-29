@@ -9,6 +9,7 @@ export interface BaseEditorItem {
   category?: string;
   type?: string;
   link?: string;
+  docs?: string;
 }
 
 export interface EditorClassNames {

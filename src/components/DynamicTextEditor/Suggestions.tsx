@@ -14,6 +14,8 @@ interface SuggestionsProps {
     suggestion?: string;
     suggestionSelected?: string;
     suggestionHovered?: string;
+    category?: string;
+    description?: string;
   };
   maxHeight?: number;
   minWidth?: number;
@@ -25,6 +27,43 @@ const DefaultSuggestionItem = ({ item, isSelected, isHovered }: { item: BaseEdit
     <div className="suggestion-item-label">{item.label}</div>
     {item.description && <div className="suggestion-item-description">{item.description}</div>}
     {item.category && <div className="suggestion-item-category">{item.category}</div>}
+  </div>
+);
+
+const EnhancedSuggestionItem = ({
+  item,
+  isSelected,
+  isHovered,
+  classNames,
+}: {
+  item: BaseEditorItem;
+  isSelected: boolean;
+  isHovered: boolean;
+  classNames?: {
+    category?: string;
+    description?: string;
+  };
+}) => (
+  <div className="enhanced-suggestion-item">
+    <div className="suggestion-content">
+      <div className="suggestion-label">
+        <span>{item.label}</span>
+        {item.category &&
+          (item.link ? (
+            <a href={item.link} className="category-link" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+              {item.category}
+            </a>
+          ) : (
+            <span className={`suggestion-category ${classNames?.category || ""}`}>{item.category}</span>
+          ))}
+      </div>
+      {item.description && <div className={`suggestion-description ${classNames?.description || ""}`}>{item.description}</div>}
+    </div>
+    {item.docs && (
+      <a href={item.docs} className="docs-link" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+        Docs
+      </a>
+    )}
   </div>
 );
 
@@ -204,7 +243,21 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
             data-index={index}
             style={hasCustomRenderer && isSelected ? { backgroundColor: "rgba(0, 120, 212, 0.08)" } : undefined}
           >
-            {renderItem ? renderItem(item, isSelected, isHovered) : <DefaultSuggestionItem item={item} isSelected={isSelected} isHovered={isHovered} />}
+            {renderItem ? (
+              renderItem(item, isSelected, isHovered)
+            ) : item.docs || item.link ? (
+              <EnhancedSuggestionItem
+                item={item}
+                isSelected={isSelected}
+                isHovered={isHovered}
+                classNames={{
+                  category: classNames?.category,
+                  description: classNames?.description,
+                }}
+              />
+            ) : (
+              <DefaultSuggestionItem item={item} isSelected={isSelected} isHovered={isHovered} />
+            )}
           </div>
         );
       })}

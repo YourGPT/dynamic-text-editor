@@ -75,7 +75,7 @@
 
 .default-suggestion-item:hover .suggestion-item-label,
 .default-suggestion-item.selected .suggestion-item-label {
-  font-weight: 600;
+  /* font-weight: 600; */
   color: hsl(var(--foreground));
 }
 
@@ -116,7 +116,7 @@
 
 /* Scrollbar styling */
 .suggestions-dropdown::-webkit-scrollbar {
-  width: 8px;
+  width: 4px;
 }
 
 .suggestions-dropdown::-webkit-scrollbar-track {
@@ -131,4 +131,87 @@
 
 .suggestions-dropdown::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--foreground) / 0.3);
+}
+
+/* New styles based on styled-components layout */
+.enhanced-suggestion-item {
+  /* padding: 8px 12px; */
+  cursor: pointer;
+  border-bottom: 1px solid hsl(var(--foreground) / 0.05);
+  background-color: transparent;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.enhanced-suggestion-item.selected {
+  background-color: hsl(var(--primary) / 0.1);
+}
+
+.enhanced-suggestion-item:hover {
+  background-color: hsl(var(--primary) / 0.05);
+}
+
+.enhanced-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-content {
+  flex: 1;
+}
+
+.docs-link {
+  color: hsl(var(--primary));
+  font-size: 0.875em;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.docs-link:hover {
+  background-color: hsl(var(--primary) / 0.1);
+}
+
+.suggestion-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.suggestion-label span {
+  font-weight: 500;
+  color: hsl(var(--foreground));
+}
+
+.suggestion-category {
+  font-size: 0.875em;
+  color: hsl(var(--foreground) / 0.6);
+  background: hsl(var(--background) / 0.8);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.category-link {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 0.875em;
+  background: hsl(var(--background) / 0.8);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.category-link:hover {
+  background: hsl(var(--primary) / 0.1);
+}
+
+.suggestion-description {
+  font-size: 0.875em;
+  color: hsl(var(--foreground) / 0.7);
 }
