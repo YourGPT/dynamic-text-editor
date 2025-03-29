@@ -112,7 +112,7 @@ const useQuill = ({ container, theme = "snow", placeholder = "Write something...
 
       // Set up text change event handler
       if (onTextChange) {
-        quillInstance.on("text-change", (delta, oldDelta, source) => {
+        quillInstance.on("text-change", (delta, _, source) => {
           const html = quillInstance.root.innerHTML;
           onTextChange(html, delta, source);
         });

@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Editor } from "draft-js";
-
 export interface BaseEditorItem {
   value: string;
   label: string;

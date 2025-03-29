@@ -312,7 +312,7 @@ const EnhancedSuggestionItemComponent = ({
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={(e) => handleLinkClick(e, item.link)}
+                onClick={(e: React.MouseEvent) => handleLinkClick(e, item.link)}
                 onMouseDown={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -332,8 +332,8 @@ const EnhancedSuggestionItemComponent = ({
           href={item.docs}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => handleLinkClick(e, item.docs)}
-          onMouseDown={(e) => {
+          onClick={(e: React.MouseEvent) => handleLinkClick(e, item.docs)}
+          onMouseDown={(e: React.MouseEvent) => {
             e.stopPropagation();
             e.preventDefault();
           }}
@@ -527,7 +527,7 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
           <ItemComponent
             key={item.id || `suggestion-${index}`}
             ref={isSelected ? selectedItemRef : null}
-            onMouseDown={(e) => handleItemMouseDown(e, item)}
+            onMouseDown={(e: React.MouseEvent) => handleItemMouseDown(e, item)}
             onMouseEnter={() => handleItemMouseEnter(index)}
             onMouseLeave={handleItemMouseLeave}
             className={itemClassNames}
