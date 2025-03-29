@@ -18,10 +18,23 @@ A flexible and customizable prompt editor for React applications with variable s
 npm install dynamic-prompt-editor
 ```
 
+## CSS Imports
+
+You need to import the necessary CSS for the editor to display properly:
+
+```tsx
+// Import the required CSS styles
+import "dynamic-prompt-editor/dist/components/DynamicTextEditor/styles/editor.css";
+import "dynamic-prompt-editor/dist/components/DynamicTextEditor/styles/suggestions.css";
+```
+
 ## Basic Usage
 
 ```tsx
 import { DraftPromptEditor } from "dynamic-prompt-editor";
+// Import required CSS
+import "dynamic-prompt-editor/dist/components/DynamicTextEditor/styles/editor.css";
+import "dynamic-prompt-editor/dist/components/DynamicTextEditor/styles/suggestions.css";
 
 function App() {
   const [value, setValue] = useState("Hello {{VISITOR.name}}!");
