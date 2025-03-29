@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "vite --config demo/vite.config.ts --port 3004",
     "build": "tsc -b && vite build",
-    "build:demo": "cd demo && npm run build",
+    "build:demo": "npm run build && cd demo && npm run use-local && npm run build",
     "preview": "vite preview --config demo/vite.config.ts",
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
