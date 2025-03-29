@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import Quill from "quill";
 
 export interface BaseEditorItem {
-  id: string | number;
+  id?: string | number;
   label: string;
   value: string;
   description?: string;

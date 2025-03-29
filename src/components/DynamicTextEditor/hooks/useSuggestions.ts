@@ -38,6 +38,10 @@ export const useSuggestions = ({ quillInstance, suggestions, trigger = "{{", clo
   // Keep track of the last used index to preserve between dropdown openings
   const lastUsedIndexRef = useRef<number>(0);
 
+  // Add ref to track previous query state to prevent infinite loops
+  const prevQueryRef = useRef<string>("");
+  const prevIsOpenRef = useRef<boolean>(false);
+
   // Create regex for matching {{template}}
   const templateRegex = useRegex(new RegExp(`${trigger.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^${closingChar}]*)${closingChar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "g"));
 
@@ -48,7 +52,11 @@ export const useSuggestions = ({ quillInstance, suggestions, trigger = "{{", clo
     if (state.isOpen) {
       lastUsedIndexRef.current = state.selectedIndex;
     }
-  }, [state.selectedIndex, state.isOpen]);
+
+    // Update previous state refs
+    prevQueryRef.current = state.query;
+    prevIsOpenRef.current = state.isOpen;
+  }, [state.selectedIndex, state.isOpen, state.query]);
 
   const checkForTrigger = useCallback(() => {
     if (!quillInstance) return;
@@ -76,17 +84,20 @@ export const useSuggestions = ({ quillInstance, suggestions, trigger = "{{", clo
       const indexToUse = lastUsedIndexRef.current;
       selectedIndexRef.current = indexToUse;
 
-      setState((prev) => ({
-        ...prev,
-        isOpen: true,
-        query: "",
-        filteredItems: suggestions,
-        selectedIndex: indexToUse, // Use stored index instead of 0
-        triggerPosition: {
-          top: editorRect.top + bounds.top + bounds.height + 5, // Add 5px padding
-          left: editorRect.left + bounds.left,
-        },
-      }));
+      // Guard: Only update if not already open with empty query
+      if (!prevIsOpenRef.current || prevQueryRef.current !== "") {
+        setState((prev) => ({
+          ...prev,
+          isOpen: true,
+          query: "",
+          filteredItems: suggestions,
+          selectedIndex: indexToUse, // Use stored index instead of 0
+          triggerPosition: {
+            top: editorRect.top + bounds.top + bounds.height + 5, // Add 5px padding
+            left: editorRect.left + bounds.left,
+          },
+        }));
+      }
 
       return true;
     }
@@ -99,6 +110,12 @@ export const useSuggestions = ({ quillInstance, suggestions, trigger = "{{", clo
       const hasClosing = text.indexOf(closingChar, lastTriggerPos) > -1;
       if (!hasClosing || text.indexOf(closingChar, lastTriggerPos) > cursorPosition) {
         const query = text.slice(lastTriggerPos + trigger.length, cursorPosition);
+
+        // Guard: If the query hasn't changed and dropdown is already open, don't update state
+        if (query === prevQueryRef.current && prevIsOpenRef.current) {
+          return true;
+        }
+
         const bounds = quillInstance.getBounds(lastTriggerPos);
         if (!bounds) return false;
 
@@ -128,6 +145,11 @@ export const useSuggestions = ({ quillInstance, suggestions, trigger = "{{", clo
 
         return true;
       }
+    }
+
+    // Don't close if it's already closed (guard against unnecessary updates)
+    if (!prevIsOpenRef.current) {
+      return false;
     }
 
     setState((prev) => ({ ...prev, isOpen: false }));
@@ -238,6 +260,7 @@ export const useSuggestions = ({ quillInstance, suggestions, trigger = "{{", clo
   );
 
   // Simplified handleKeyDown function with direct state updates to ensure they persist
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (!state.isOpen) return;
@@ -319,7 +342,7 @@ export const useSuggestions = ({ quillInstance, suggestions, trigger = "{{", clo
       console.log("🎹 Keyboard navigation detached");
       document.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, [state.isOpen, handleKeyDown]);
+  }, [state.isOpen]);
 
   // Setup Quill text-change handler
   useEffect(() => {

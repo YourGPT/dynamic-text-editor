@@ -45,7 +45,7 @@ const SuggestionsDropdown = styled.div`
   box-shadow: 0 6px 16px hsl(var(--foreground) / 0.08), 0 3px 6px hsl(var(--foreground) / 0.05);
   background-color: hsl(var(--background));
   border: 1px solid hsl(var(--foreground) / 0.1);
-  overflow: hidden;
+  /* overflow: hidden; */
   padding: 4px 0;
   animation: ${fadeIn} 0.2s ease-in-out;
 
@@ -402,8 +402,6 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
 
     // On subsequent renders, only scroll when selectedIndex changes
     if (previousSelectedIndex.current !== selectedIndex) {
-      console.log(`📌 Scrolling to item ${selectedIndex} of ${items.length}`);
-
       try {
         selectedItemRef.current.scrollIntoView({
           block: "nearest",
