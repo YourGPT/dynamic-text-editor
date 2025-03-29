@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { BaseEditorItem } from "./types";
-import "./styles/suggestions.css";
+import { styled, keyframes } from "styled-components";
 
 interface SuggestionsProps {
   isOpen: boolean;
@@ -22,15 +22,230 @@ interface SuggestionsProps {
   maxWidth?: number;
 }
 
-const DefaultSuggestionItem = ({ item, isSelected, isHovered }: { item: BaseEditorItem; isSelected: boolean; isHovered: boolean }) => (
-  <div className="suggestion-item-content default-suggestion">
-    <div className="suggestion-item-label">{item.label}</div>
-    {item.description && <div className="suggestion-item-description">{item.description}</div>}
-    {item.category && <div className="suggestion-item-category">{item.category}</div>}
-  </div>
+// Animations
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+// Styled Components
+const SuggestionsDropdown = styled.div`
+  position: fixed;
+  z-index: 9999;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px hsl(var(--foreground) / 0.08), 0 3px 6px hsl(var(--foreground) / 0.05);
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--foreground) / 0.1);
+  overflow: hidden;
+  padding: 4px 0;
+  animation: ${fadeIn} 0.2s ease-in-out;
+
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: hsl(var(--background) / 0.9);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: hsl(var(--foreground) / 0.2);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--foreground) / 0.3);
+  }
+`;
+
+const BaseSuggestionItem = styled.div`
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid hsl(var(--foreground) / 0.05);
+  user-select: none;
+  color: hsl(var(--foreground));
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: hsl(var(--primary) / 0.05);
+  }
+
+  &.selected {
+    background-color: hsl(var(--primary) / 0.1);
+  }
+`;
+
+const DefaultSuggestionItem = styled(BaseSuggestionItem)`
+  border-left: 3px solid transparent;
+
+  &.selected {
+    border-left: 3px solid hsl(var(--primary) / 0.8);
+  }
+
+  &:hover:not(.selected) {
+    border-left: 3px solid hsl(var(--primary) / 0.4);
+    transform: translateX(2px);
+  }
+`;
+
+const CustomSuggestionItem = styled(BaseSuggestionItem)`
+  background-color: transparent;
+
+  &.selected {
+    background-color: hsl(var(--primary) / 0.08);
+  }
+
+  &:hover:not(.selected) {
+    background-color: hsl(var(--primary) / 0.03);
+  }
+`;
+
+const SuggestionItemContent = styled.div`
+  &.default-suggestion {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+`;
+
+const SuggestionItemLabel = styled.div`
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  ${DefaultSuggestionItem}:hover &,
+  ${DefaultSuggestionItem}.selected & {
+    color: hsl(var(--foreground));
+  }
+`;
+
+const SuggestionItemDescription = styled.div`
+  font-size: 0.9em;
+  color: hsl(var(--foreground) / 0.7);
+  transition: all 0.2s ease;
+
+  ${DefaultSuggestionItem}:hover &,
+  ${DefaultSuggestionItem}.selected & {
+    color: hsl(var(--foreground) / 0.8);
+  }
+`;
+
+const SuggestionItemCategory = styled.div`
+  font-size: 0.8em;
+  color: hsl(var(--foreground) / 0.5);
+  transition: all 0.2s ease;
+
+  ${DefaultSuggestionItem}:hover &,
+  ${DefaultSuggestionItem}.selected & {
+    color: hsl(var(--foreground) / 0.7);
+  }
+`;
+
+// Enhanced suggestion item styled components
+const EnhancedItem = styled.div`
+  cursor: pointer;
+  border-bottom: 1px solid hsl(var(--foreground) / 0.05);
+  background-color: transparent;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+
+  &.selected {
+    background-color: hsl(var(--primary) / 0.1);
+  }
+
+  &:hover {
+    background-color: hsl(var(--primary) / 0.05);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const SuggestionContent = styled.div`
+  flex: 1;
+`;
+
+const DocsLink = styled.a`
+  color: hsl(var(--primary));
+  font-size: 0.875em;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+
+  &:hover {
+    background-color: hsl(var(--primary) / 0.1);
+  }
+`;
+
+const SuggestionLabel = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+
+  span {
+    font-weight: 500;
+    color: hsl(var(--foreground));
+  }
+`;
+
+const SuggestionCategory = styled.span`
+  font-size: 0.875em;
+  color: hsl(var(--foreground) / 0.6);
+  background: hsl(var(--background) / 0.8);
+  padding: 2px 8px;
+  border-radius: 4px;
+`;
+
+const CategoryLink = styled.a`
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 0.875em;
+  background: hsl(var(--background) / 0.8);
+  padding: 2px 8px;
+  border-radius: 4px;
+
+  &:hover {
+    background: hsl(var(--primary) / 0.1);
+  }
+`;
+
+const SuggestionDescription = styled.div`
+  font-size: 0.875em;
+  color: hsl(var(--foreground) / 0.7);
+`;
+
+const DefaultSuggestionItemComponent = ({ item, isSelected, isHovered }: { item: BaseEditorItem; isSelected: boolean; isHovered: boolean }) => (
+  <SuggestionItemContent className="default-suggestion">
+    <SuggestionItemLabel>{item.label}</SuggestionItemLabel>
+    {item.description && <SuggestionItemDescription>{item.description}</SuggestionItemDescription>}
+    {item.category && <SuggestionItemCategory>{item.category}</SuggestionItemCategory>}
+  </SuggestionItemContent>
 );
 
-const EnhancedSuggestionItem = ({
+const EnhancedSuggestionItemComponent = ({
   item,
   isSelected,
   isHovered,
@@ -44,27 +259,27 @@ const EnhancedSuggestionItem = ({
     description?: string;
   };
 }) => (
-  <div className="enhanced-suggestion-item">
-    <div className="suggestion-content">
-      <div className="suggestion-label">
+  <EnhancedItem className={`enhanced-suggestion-item ${isSelected ? "selected" : ""}`}>
+    <SuggestionContent>
+      <SuggestionLabel>
         <span>{item.label}</span>
         {item.category &&
           (item.link ? (
-            <a href={item.link} className="category-link" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+            <CategoryLink href={item.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={classNames?.category}>
               {item.category}
-            </a>
+            </CategoryLink>
           ) : (
-            <span className={`suggestion-category ${classNames?.category || ""}`}>{item.category}</span>
+            <SuggestionCategory className={classNames?.category}>{item.category}</SuggestionCategory>
           ))}
-      </div>
-      {item.description && <div className={`suggestion-description ${classNames?.description || ""}`}>{item.description}</div>}
-    </div>
+      </SuggestionLabel>
+      {item.description && <SuggestionDescription className={classNames?.description}>{item.description}</SuggestionDescription>}
+    </SuggestionContent>
     {item.docs && (
-      <a href={item.docs} className="docs-link" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+      <DocsLink href={item.docs} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
         Docs
-      </a>
+      </DocsLink>
     )}
-  </div>
+  </EnhancedItem>
 );
 
 export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, position, selectedIndex, onSelect, renderItem, classNames, maxHeight = 300, minWidth = 200, maxWidth = 400 }) => {
@@ -202,38 +417,38 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
     return null;
   }
 
-  // CSS for the dropdown container
-  const dropdownStyle: React.CSSProperties = {
-    position: "fixed",
-    top: position.top + window.scrollY,
-    left: position.left,
-    zIndex: 9999,
-    maxHeight,
-    minWidth,
-    maxWidth,
-    overflowY: "auto", // Enable vertical scrolling
-    overflowX: "hidden", // Prevent horizontal scrolling
-  };
-
   return (
-    <div ref={dropdownRef} className={`suggestions-dropdown ${classNames?.suggestions || ""}`} style={dropdownStyle} onMouseDown={handleContainerMouseDown} data-testid="suggestions-dropdown">
+    <SuggestionsDropdown
+      ref={dropdownRef}
+      className={classNames?.suggestions}
+      style={{
+        top: position.top + window.scrollY,
+        left: position.left,
+        maxHeight,
+        minWidth,
+        maxWidth,
+      }}
+      onMouseDown={handleContainerMouseDown}
+      data-testid="suggestions-dropdown"
+    >
       {items.map((item, index) => {
         const isSelected = index === selectedIndex;
         const isHovered = index === hoveredIndex;
         const hasCustomRenderer = !!renderItem;
 
-        // Class names for the item - apply different classes based on whether this uses a custom renderer
+        // Choose the appropriate styled component based on whether we have a custom renderer
+        const ItemComponent = hasCustomRenderer ? CustomSuggestionItem : DefaultSuggestionItem;
+
+        // Class names for the item
         const itemClassNames = `
-                    suggestion-item 
-                    ${!hasCustomRenderer ? "default-suggestion-item" : "custom-suggestion-item"}
-                    ${isSelected ? "selected" : ""} 
-                    ${classNames?.suggestion || ""} 
-                    ${isSelected ? classNames?.suggestionSelected || "" : ""} 
-                    ${isHovered ? classNames?.suggestionHovered || "" : ""}
-                `;
+          ${isSelected ? "selected" : ""} 
+          ${classNames?.suggestion || ""} 
+          ${isSelected ? classNames?.suggestionSelected || "" : ""} 
+          ${isHovered ? classNames?.suggestionHovered || "" : ""}
+        `;
 
         return (
-          <div
+          <ItemComponent
             key={item.id || `suggestion-${index}`}
             ref={isSelected ? selectedItemRef : null}
             onMouseDown={(e) => handleItemMouseDown(e, item)}
@@ -241,12 +456,11 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
             onMouseLeave={handleItemMouseLeave}
             className={itemClassNames}
             data-index={index}
-            style={hasCustomRenderer && isSelected ? { backgroundColor: "rgba(0, 120, 212, 0.08)" } : undefined}
           >
             {renderItem ? (
               renderItem(item, isSelected, isHovered)
             ) : item.docs || item.link ? (
-              <EnhancedSuggestionItem
+              <EnhancedSuggestionItemComponent
                 item={item}
                 isSelected={isSelected}
                 isHovered={isHovered}
@@ -256,12 +470,12 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
                 }}
               />
             ) : (
-              <DefaultSuggestionItem item={item} isSelected={isSelected} isHovered={isHovered} />
+              <DefaultSuggestionItemComponent item={item} isSelected={isSelected} isHovered={isHovered} />
             )}
-          </div>
+          </ItemComponent>
         );
       })}
-    </div>
+    </SuggestionsDropdown>
   );
 };
 

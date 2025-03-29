@@ -8,9 +8,10 @@ A flexible and customizable prompt editor for React applications with variable s
 
 - 🚀 Variable suggestions with customizable triggers
 - ⌨️ Keyboard navigation
-- 🎨 Custom styling support
+- 🎨 Custom styling support with styled-components
 - 🔧 Custom rendering capabilities
-- 📝 Rich text editing powered by Draft.js
+- 📝 Rich text editing powered by Quill
+- 📱 Responsive design
 
 ## Installation
 
@@ -18,23 +19,10 @@ A flexible and customizable prompt editor for React applications with variable s
 npm install dynamic-prompt-editor
 ```
 
-## CSS Imports
-
-You need to import the necessary CSS for the editor to display properly:
-
-```tsx
-// Import the required CSS styles
-import "dynamic-prompt-editor/dist/components/DynamicTextEditor/styles/editor.css";
-import "dynamic-prompt-editor/dist/components/DynamicTextEditor/styles/suggestions.css";
-```
-
 ## Basic Usage
 
 ```tsx
-import { DraftPromptEditor } from "dynamic-prompt-editor";
-// Import required CSS
-import "dynamic-prompt-editor/dist/components/DynamicTextEditor/styles/editor.css";
-import "dynamic-prompt-editor/dist/components/DynamicTextEditor/styles/suggestions.css";
+import { DynamicTextEditor } from "dynamic-prompt-editor";
 
 function App() {
   const [value, setValue] = useState("Hello {{VISITOR.name}}!");
@@ -49,7 +37,7 @@ function App() {
     },
   ];
 
-  return <DraftPromptEditor value={value} onChange={setValue} suggestions={suggestions} />;
+  return <DynamicTextEditor value={value} onChange={setValue} suggestions={suggestions} />;
 }
 ```
 
@@ -71,20 +59,20 @@ function App() {
 | maxSuggestionHeight | number                          | No       | Max height of suggestion box   |
 | suggestionTrigger   | string                          | No       | Custom trigger (default: '{{') |
 | suggestionClosing   | string                          | No       | Custom closing (default: '}}') |
+| showCustomToolbar   | boolean                         | No       | Show formatting toolbar        |
 
 ## Examples
 
 ### Custom Styling
 
 ```tsx
-<DraftPromptEditor
+<DynamicTextEditor
   value={value}
   onChange={setValue}
   suggestions={suggestions}
   classNames={{
     root: "custom-editor",
     editor: "custom-editor__input",
-    variable: "custom-editor__variable",
     suggestions: "custom-editor__suggestions",
     suggestion: "custom-editor__suggestion",
     suggestionSelected: "custom-editor__suggestion--selected",
@@ -97,11 +85,11 @@ function App() {
 ### Custom Rendering
 
 ```tsx
-const renderCustomItem = (item, isSelected) => (
+const renderCustomItem = (item, isSelected, isHovered) => (
   <div
     style={{
       padding: "8px",
-      backgroundColor: isSelected ? "#f0f9ff" : "transparent",
+      backgroundColor: isSelected ? "#f0f9ff" : isHovered ? "#f8fafc" : "transparent",
     }}
   >
     <div style={{ fontWeight: "bold" }}>{item.label}</div>
@@ -109,13 +97,13 @@ const renderCustomItem = (item, isSelected) => (
   </div>
 );
 
-<DraftPromptEditor value={value} onChange={setValue} suggestions={suggestions} renderItem={renderCustomItem} />;
+<DynamicTextEditor value={value} onChange={setValue} suggestions={suggestions} renderItem={renderCustomItem} />;
 ```
 
 ### Custom Triggers
 
 ```tsx
-<DraftPromptEditor value={value} onChange={setValue} suggestions={suggestions} suggestionTrigger="${" suggestionClosing="}" />
+<DynamicTextEditor value={value} onChange={setValue} suggestions={suggestions} suggestionTrigger="${" suggestionClosing="}" />
 ```
 
 ## Contributing

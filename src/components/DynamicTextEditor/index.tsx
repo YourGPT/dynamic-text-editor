@@ -4,9 +4,7 @@ import type { DynamicTextEditorProps, DynamicTextEditorRef } from "./types";
 import Suggestions from "./Suggestions";
 import TurndownService from "turndown";
 import * as Showdown from "showdown";
-//
-import "./styles/editor.css";
-import "./styles/suggestions.css";
+import { styled } from "styled-components";
 
 // Create instances of converters
 const turndownService = new TurndownService({
@@ -30,6 +28,114 @@ const showdownConverter = new Showdown.Converter({
   simpleLineBreaks: true,
   strikethrough: true,
 });
+
+// Styled Components
+const EditorContainer = styled.div`
+  position: relative;
+`;
+
+const EditorContent = styled.div`
+  .ql-container.ql-snow {
+    border: none;
+  }
+
+  .ql-editor {
+    padding: unset;
+    color: hsl(var(--foreground));
+  }
+
+  .ql-editor.ql-blank::before {
+    left: 0px;
+    color: hsl(var(--foreground) / 0.5);
+  }
+
+  .quill-ui-editor {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .quill-ui-editor .editor-content {
+    flex: 1;
+    min-height: 150px;
+  }
+
+  /* Hide duplicate toolbars */
+  .quill-ui-editor .ql-toolbar + .ql-toolbar {
+    display: none;
+  }
+
+  /* Ensure placeholder is properly positioned */
+  .quill-ui-editor .ql-editor.ql-blank::before {
+    font-style: italic;
+    position: absolute;
+    left: 15px;
+    pointer-events: none;
+    color: hsl(var(--foreground) / 0.5);
+  }
+
+  /* Bubble theme styles */
+  .theme-bubble .editor-content {
+    border: 1px solid hsl(var(--foreground) / 0.2);
+    border-radius: 4px;
+    padding: 12px;
+    transition: border-color 0.2s ease;
+    background-color: hsl(var(--background));
+  }
+
+  .theme-bubble .editor-content:hover {
+    border-color: hsl(var(--foreground) / 0.4);
+  }
+
+  .theme-bubble .editor-content:focus-within {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+  }
+
+  /* Adjust bubble toolbar position */
+  .theme-bubble .ql-bubble .ql-tooltip {
+    z-index: 1000;
+  }
+`;
+
+const CustomToolbar = styled.div`
+  display: flex;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  gap: 4px;
+  padding-bottom: 4px;
+`;
+
+const ToolbarButton = styled.button<{ $active?: boolean }>`
+  width: 30px;
+  height: 30px;
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--foreground) / 0.1);
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: background-color 0.2s, border-color 0.2s;
+  color: hsl(var(--foreground));
+
+  &:hover {
+    background-color: hsl(var(--foreground) / 0.05);
+    border-color: hsl(var(--foreground) / 0.2);
+  }
+
+  &:active {
+    background-color: hsl(var(--foreground) / 0.1);
+  }
+
+  ${({ $active }) =>
+    $active &&
+    `
+    background-color: hsl(var(--primary) / 0.1);
+    border-color: hsl(var(--primary));
+    color: hsl(var(--primary));
+  `}
+`;
 
 const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, DynamicTextEditorProps> = (
   { className = "", classNames, suggestions, renderItem, value, onChange, minSuggestionWidth, maxSuggestionWidth, maxSuggestionHeight, showCustomToolbar = false, ...props },
@@ -166,25 +272,25 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   }));
 
   return (
-    <div className={`dynamic-text-editor ${className} ${classNames?.root || ""}`}>
+    <EditorContainer className={`dynamic-text-editor ${className} ${classNames?.root || ""}`}>
       {showCustomToolbar && (
-        <div className="dynamic-text-editor-custom-toolbar">
-          <button type="button" onClick={handleBold} className={`toolbar-button ${formatState.bold ? "active" : ""}`} title="Bold">
+        <CustomToolbar className="dynamic-text-editor-custom-toolbar">
+          <ToolbarButton type="button" onClick={handleBold} $active={formatState.bold} title="Bold">
             <strong>B</strong>
-          </button>
-          <button type="button" onClick={handleItalic} className={`toolbar-button ${formatState.italic ? "active" : ""}`} title="Italic">
+          </ToolbarButton>
+          <ToolbarButton type="button" onClick={handleItalic} $active={formatState.italic} title="Italic">
             <em>I</em>
-          </button>
-          <button type="button" onClick={handleUnderline} className={`toolbar-button ${formatState.underline ? "active" : ""}`} title="Underline">
+          </ToolbarButton>
+          <ToolbarButton type="button" onClick={handleUnderline} $active={formatState.underline} title="Underline">
             <u>U</u>
-          </button>
-          <button type="button" onClick={handleLink} className={`toolbar-button ${formatState.link ? "active" : ""}`} title="Link">
+          </ToolbarButton>
+          <ToolbarButton type="button" onClick={handleLink} $active={formatState.link} title="Link">
             🔗
-          </button>
-        </div>
+          </ToolbarButton>
+        </CustomToolbar>
       )}
 
-      <div ref={quillRef} className={`dynamic-text-editor-container ${classNames?.editor || ""}`} />
+      <EditorContent ref={quillRef} className={`dynamic-text-editor-container ${classNames?.editor || ""}`} />
 
       <Suggestions
         isOpen={suggestionState.isOpen}
@@ -203,7 +309,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
         minWidth={minSuggestionWidth}
         maxWidth={maxSuggestionWidth}
       />
-    </div>
+    </EditorContainer>
   );
 };
 
