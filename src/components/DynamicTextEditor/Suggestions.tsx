@@ -25,207 +25,6 @@ interface SuggestionsProps {
   className?: string;
 }
 
-// Animations
-const fadeIn = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`;
-
-// Styled Components
-const SuggestionsDropdown = styled.div`
-  position: fixed;
-  z-index: 9999;
-  overflow-y: auto;
-  overflow-x: hidden;
-  border-radius: 8px;
-  box-shadow: 0 6px 16px hsl(var(--foreground) / 0.08), 0 3px 6px hsl(var(--foreground) / 0.05);
-  background-color: hsl(var(--background));
-  border: 1px solid hsl(var(--foreground) / 0.1);
-  /* overflow: hidden; */
-  padding: 4px 0;
-  animation: ${fadeIn} 0.2s ease-in-out;
-
-  /* Scrollbar styling */
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: hsl(var(--background) / 0.9);
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: hsl(var(--foreground) / 0.2);
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--foreground) / 0.3);
-  }
-`;
-
-const BaseSuggestionItem = styled.div`
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  border-bottom: 1px solid hsl(var(--foreground) / 0.05);
-  user-select: none;
-  color: hsl(var(--foreground));
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:hover {
-    background-color: hsl(var(--primary) / 0.05);
-  }
-
-  &.selected {
-    background-color: hsl(var(--primary) / 0.1);
-  }
-`;
-
-const DefaultSuggestionItem = styled(BaseSuggestionItem)`
-  border-left: 3px solid transparent;
-
-  &.selected {
-    border-left: 3px solid hsl(var(--primary) / 0.8);
-  }
-
-  &:hover:not(.selected) {
-    border-left: 3px solid hsl(var(--primary) / 0.4);
-  }
-`;
-
-const CustomSuggestionItem = styled(BaseSuggestionItem)`
-  background-color: transparent;
-
-  &.selected {
-    background-color: hsl(var(--primary) / 0.08);
-  }
-
-  &:hover:not(.selected) {
-    background-color: hsl(var(--primary) / 0.03);
-  }
-`;
-
-const SuggestionItemContent = styled.div`
-  &.default-suggestion {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-`;
-
-const SuggestionItemLabel = styled.div`
-  font-weight: 500;
-  transition: all 0.2s ease;
-
-  ${DefaultSuggestionItem}:hover &,
-  ${DefaultSuggestionItem}.selected & {
-    color: hsl(var(--foreground));
-  }
-`;
-
-const SuggestionItemDescription = styled.div`
-  font-size: 0.9em;
-  color: hsl(var(--foreground) / 0.7);
-  transition: all 0.2s ease;
-
-  ${DefaultSuggestionItem}:hover &,
-  ${DefaultSuggestionItem}.selected & {
-    color: hsl(var(--foreground) / 0.8);
-  }
-`;
-
-const SuggestionItemCategory = styled.div`
-  font-size: 0.8em;
-  color: hsl(var(--foreground) / 0.5);
-  transition: all 0.2s ease;
-
-  ${DefaultSuggestionItem}:hover &,
-  ${DefaultSuggestionItem}.selected & {
-    color: hsl(var(--foreground) / 0.7);
-  }
-`;
-
-// Enhanced suggestion item styled components
-const EnhancedItem = styled.div`
-  cursor: pointer;
-  border-bottom: 1px solid hsl(var(--foreground) / 0.05);
-  background-color: transparent;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const SuggestionContent = styled.div`
-  flex: 1;
-`;
-
-const DocsLink = styled.a`
-  color: hsl(var(--primary));
-  font-size: 0.875em;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  padding: 4px;
-  border-radius: 4px;
-
-  &:hover {
-    background-color: hsl(var(--primary) / 0.1);
-  }
-`;
-
-const SuggestionLabel = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-
-  span {
-    font-weight: 500;
-    color: hsl(var(--foreground));
-  }
-`;
-
-const SuggestionCategory = styled.span`
-  font-size: 0.875em;
-  color: hsl(var(--foreground) / 0.6);
-  background: hsl(var(--background) / 0.8);
-  padding: 2px 8px;
-  border-radius: 4px;
-`;
-
-const CategoryLink = styled.a`
-  color: hsl(var(--primary));
-  text-decoration: underline;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  font-size: 0.875em;
-  padding: 2px 8px;
-  border-radius: 4px;
-`;
-
-const SuggestionDescription = styled.div`
-  font-size: 0.875em;
-  color: hsl(var(--foreground) / 0.7);
-`;
-
 const DefaultSuggestionItemComponent = ({ item }: { item: BaseEditorItem; isSelected: boolean; isHovered: boolean }) => (
   <SuggestionItemContent className="default-suggestion">
     <SuggestionItemLabel>{item.label}</SuggestionItemLabel>
@@ -758,7 +557,8 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ quillInstance, suggest
 
       // Check if dropdown would go below viewport
       if (state.triggerPosition.top + rect.height > viewportHeight) {
-        dropdown.style.top = `${state.triggerPosition.top - rect.height}px`;
+        // Add window.scrollY here too, and include a small gap (-5px) for spacing
+        dropdown.style.top = `${state.triggerPosition.top - rect.height + window.scrollY - 5}px`;
       } else {
         dropdown.style.top = `${state.triggerPosition.top + window.scrollY}px`;
       }
@@ -950,3 +750,204 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ quillInstance, suggest
 };
 
 export default Suggestions;
+
+// Animations
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+// Styled Components
+const SuggestionsDropdown = styled.div`
+  position: fixed;
+  z-index: 9999;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px hsl(var(--foreground) / 0.08), 0 3px 6px hsl(var(--foreground) / 0.05);
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--foreground) / 0.1);
+  /* overflow: hidden; */
+  animation: ${fadeIn} 0.2s ease-in-out;
+
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: hsl(var(--background) / 0.9);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: hsl(var(--foreground) / 0.2);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--foreground) / 0.3);
+  }
+`;
+
+const BaseSuggestionItem = styled.div`
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid hsl(var(--foreground) / 0.05);
+  user-select: none;
+  color: hsl(var(--foreground));
+  font-size: 14px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: hsl(var(--primary) / 0.05);
+  }
+
+  &.selected {
+    background-color: hsl(var(--primary) / 0.1);
+  }
+`;
+
+const DefaultSuggestionItem = styled(BaseSuggestionItem)`
+  border-left: 3px solid transparent;
+
+  &.selected {
+    border-left: 3px solid hsl(var(--primary) / 0.8);
+  }
+
+  &:hover:not(.selected) {
+    border-left: 3px solid hsl(var(--primary) / 0.4);
+  }
+`;
+
+const CustomSuggestionItem = styled(BaseSuggestionItem)`
+  background-color: transparent;
+
+  &.selected {
+    background-color: hsl(var(--primary) / 0.08);
+  }
+
+  &:hover:not(.selected) {
+    background-color: hsl(var(--primary) / 0.03);
+  }
+`;
+
+const SuggestionItemContent = styled.div`
+  &.default-suggestion {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+`;
+
+const SuggestionItemLabel = styled.div`
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  ${DefaultSuggestionItem}:hover &,
+  ${DefaultSuggestionItem}.selected & {
+    color: hsl(var(--foreground));
+  }
+`;
+
+const SuggestionItemDescription = styled.div`
+  font-size: 0.9em;
+  color: hsl(var(--foreground) / 0.7);
+  transition: all 0.2s ease;
+
+  ${DefaultSuggestionItem}:hover &,
+  ${DefaultSuggestionItem}.selected & {
+    color: hsl(var(--foreground) / 0.8);
+  }
+`;
+
+const SuggestionItemCategory = styled.div`
+  font-size: 0.8em;
+  color: hsl(var(--foreground) / 0.5);
+  transition: all 0.2s ease;
+
+  ${DefaultSuggestionItem}:hover &,
+  ${DefaultSuggestionItem}.selected & {
+    color: hsl(var(--foreground) / 0.7);
+  }
+`;
+
+// Enhanced suggestion item styled components
+const EnhancedItem = styled.div`
+  cursor: pointer;
+  border-bottom: 1px solid hsl(var(--foreground) / 0.05);
+  background-color: transparent;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const SuggestionContent = styled.div`
+  flex: 1;
+`;
+
+const DocsLink = styled.a`
+  color: hsl(var(--primary));
+  font-size: 0.875em;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+
+  &:hover {
+    background-color: hsl(var(--primary) / 0.1);
+  }
+`;
+
+const SuggestionLabel = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+
+  span {
+    font-weight: 500;
+    color: hsl(var(--foreground));
+  }
+`;
+
+const SuggestionCategory = styled.span`
+  font-size: 0.875em;
+  color: hsl(var(--foreground) / 0.6);
+  background: hsl(var(--background) / 0.8);
+  padding: 2px 8px;
+  border-radius: 4px;
+`;
+
+const CategoryLink = styled.a`
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 0.875em;
+  padding: 2px 8px;
+  border-radius: 4px;
+`;
+
+const SuggestionDescription = styled.div`
+  font-size: 0.875em;
+  color: hsl(var(--foreground) / 0.7);
+`;
