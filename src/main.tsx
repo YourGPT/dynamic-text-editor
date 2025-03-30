@@ -10,10 +10,12 @@ const Demo = () => {
 
   return (
     <div className="dynamic-text-editor-demo">
-      <DynamicTextEditor onChange={setValue} value={value} suggestions={defaultSuggestions} classNames={{}} className="" showCustomToolbar />
-      <div className="mt-4">
-        <h4 className="">Value:</h4>
-        <pre>{value}</pre>
+      <div>
+        <DynamicTextEditor onChange={setValue} value={value} suggestions={defaultSuggestions} classNames={{}} className="" showCustomToolbar />
+        <div className="mt-4">
+          <h4 className="">Value:</h4>
+          <pre>{value}</pre>
+        </div>
       </div>
     </div>
   );

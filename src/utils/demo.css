@@ -119,4 +119,9 @@ body {
   border-radius: var(--radius);
   border: 1px solid hsl(var(--color-border));
   padding: 20px;
+  font-size: 18px;
+
+  /* p { */
+  font-size: 15px;
+  /* } */
 }

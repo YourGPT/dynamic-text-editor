@@ -1,6 +1,6 @@
 {
   "name": "dynamic-prompt-editor",
-  "version": "2.1.5",
+  "version": "2.1.7",
   "private": false,
   "type": "module",
   "main": "dist/index.js",

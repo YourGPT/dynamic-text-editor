@@ -38,19 +38,20 @@ function App() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-6">
             <section className="bg-card rounded-lg p-6">
-              <h3 className="text-lg font-medium mb-4">Editor</h3>
-              <DynamicTextEditor
-                ref={editorRef}
-                value={promptValue}
-                onChange={setPromptValue}
-                suggestions={defaultSuggestions}
-                classNames={{
-                  container: "max-h-[400px] overflow-y-auto border border-border rounded-md bg-background/50 [&>div]:p-4",
-                  editor: "text-sm",
-                }}
-                className=""
-                showCustomToolbar
-              />
+              <h3 className="text-xl font-medium mb-4">Editor</h3>
+              <div className="text-sm">
+                <DynamicTextEditor
+                  ref={editorRef}
+                  value={promptValue}
+                  onChange={setPromptValue}
+                  suggestions={defaultSuggestions}
+                  classNames={{
+                    container: "max-h-[400px] overflow-y-auto border border-border rounded-md bg-background/50 [&>div]:p-4",
+                  }}
+                  className=""
+                  showCustomToolbar
+                />
+              </div>
             </section>
 
             <section className="bg-card rounded-lg p-6">

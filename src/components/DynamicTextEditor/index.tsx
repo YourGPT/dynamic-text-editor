@@ -24,24 +24,16 @@ turndownService.addRule("paragraph", {
   },
 });
 
-// Add rule to prevent escaping underscores
+// Add rule to prevent escaping special characters
 turndownService.escape = function (string) {
-  return string
-    .replace(/\\/g, "\\\\")
-    .replace(/\*/g, "\\*")
-    .replace(/^-/g, "\\-")
-    .replace(/^\+ /g, "\\+ ")
-    .replace(/^(=+)/g, "\\$1")
-    .replace(/^(#{1,6}) /g, "\\$1 ")
-    .replace(/`/g, "\\`")
-    .replace(/^~~~/g, "\\~~~")
-    .replace(/\[/g, "\\[")
-    .replace(/\]/g, "\\]")
-    .replace(/^>/g, "\\>")
-    .replace(/\(/g, "\\(")
-    .replace(/\)/g, "\\)");
-  // Notice that we don't escape underscores here
-  // No _
+  // Don't escape any characters within template variables
+  if (string.startsWith("{{") && string.endsWith("}}")) {
+    return string;
+  }
+
+  // For normal text, only escape the minimal set of characters needed for Markdown
+  return string.replace(/\\/g, "\\\\").replace(/\*/g, "\\*");
+  // Removed all other escaping to keep special characters intact
 };
 
 const showdownConverter = new Showdown.Converter({
@@ -55,14 +47,44 @@ const EditorContainer = styled.div`
 `;
 
 const EditorContent = styled.div`
+  font-size: inherit !important;
+  line-height: inherit !important;
+  font-family: inherit !important;
+
+  p,
+  b,
+  span {
+    font-size: inherit !important;
+    line-height: inherit !important;
+    font-family: inherit !important;
+  }
+
   .ql-container.ql-snow {
     border: none;
+    font-size: inherit !important;
+    font-family: inherit !important;
   }
 
   .ql-editor {
     padding: unset;
     color: hsl(var(--foreground));
     outline: none;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    font-family: inherit !important;
+  }
+
+  /* Override Quill's default font size */
+  .ql-container,
+  .ql-editor,
+  .ql-editor p {
+    font-size: inherit !important;
+    line-height: inherit !important;
+  }
+
+  /* Target any inline styles that might be added */
+  [style*="font-size"] {
+    font-size: inherit !important;
   }
 
   .ql-editor.ql-blank::before {
