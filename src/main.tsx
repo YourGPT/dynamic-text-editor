@@ -12,6 +12,8 @@ const Demo = () => {
     <div className="dynamic-text-editor-demo">
       <div>
         <DynamicTextEditor onChange={setValue} value={value} suggestions={defaultSuggestions} classNames={{}} className="" showCustomToolbar />
+
+        <textarea style={{ width: "400px", height: "200px" }} value={value} onChange={(e) => setValue(e.target.value)} />
         <div className="mt-4">
           <h4 className="">Value:</h4>
           <pre>{value}</pre>

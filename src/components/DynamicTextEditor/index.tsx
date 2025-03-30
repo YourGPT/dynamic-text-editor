@@ -1,4 +1,4 @@
-import React, { forwardRef, type ForwardRefRenderFunction, useEffect, useState } from "react";
+import React, { forwardRef, type ForwardRefRenderFunction, useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useDynamicTextEditor } from "./hooks/useDynamicTextEditor";
 import type { DynamicTextEditorProps, DynamicTextEditorRef } from "./types";
 import Suggestions from "./Suggestions";
@@ -184,40 +184,93 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   { className = "", classNames, suggestions, renderItem, value, onChange, minSuggestionWidth, maxSuggestionWidth, maxSuggestionHeight, showCustomToolbar = false, suggestionTrigger = "{{", suggestionClosing = "}}", ...props },
   ref
 ) => {
-  // Store the HTML representation of the Markdown internally
-  const [htmlValue, setHtmlValue] = useState(() => (value ? showdownConverter.makeHtml(value) : ""));
+  const lastHtmlValueRef = useRef<string>("");
+  const lastMarkdownValueRef = useRef<string>(value || "");
+  const isSelfUpdateRef = useRef<boolean>(false);
+  const selectionRef = useRef<{ index: number; length: number } | null>(null);
+
+  // Convert markdown to HTML only when the value changes
+  const htmlValue = useMemo(() => {
+    if (value === lastMarkdownValueRef.current) {
+      return lastHtmlValueRef.current;
+    }
+
+    lastMarkdownValueRef.current = value;
+    const newHtml = showdownConverter.makeHtml(value || "");
+    lastHtmlValueRef.current = newHtml;
+    return newHtml;
+  }, [value]);
+
+  // Custom onChange handler with debouncing
+  const debouncedOnChange = useCallback(
+    (html: string) => {
+      if (isSelfUpdateRef.current) return;
+
+      const markdownContent = turndownService.turndown(html);
+      lastHtmlValueRef.current = html;
+      lastMarkdownValueRef.current = markdownContent;
+
+      if (onChange) {
+        onChange(markdownContent);
+      }
+    },
+    [onChange]
+  );
+
+  const { quillRef, quillInstance, editorState, setEditorState, clearContent, focus, blur } = useDynamicTextEditor({
+    value: htmlValue,
+    onChange: debouncedOnChange,
+    suggestions,
+    toolbar: false,
+    ...props,
+  });
+
+  // Save selection when editor loses focus or before updates
+  useEffect(() => {
+    if (!quillInstance) return;
+
+    const saveSelectionHandler = () => {
+      selectionRef.current = quillInstance.getSelection();
+    };
+
+    quillInstance.on("selection-change", saveSelectionHandler);
+    return () => {
+      quillInstance.off("selection-change", saveSelectionHandler);
+    };
+  }, [quillInstance]);
+
+  // Update editor content when value changes
+  useEffect(() => {
+    if (!quillInstance || !value || isSelfUpdateRef.current) return;
+
+    // If the value hasn't changed in Markdown form, don't update
+    if (value === lastMarkdownValueRef.current && lastHtmlValueRef.current === quillInstance.root.innerHTML) {
+      return;
+    }
+
+    const selection = selectionRef.current || quillInstance.getSelection();
+    isSelfUpdateRef.current = true;
+
+    // Update content
+    quillInstance.root.innerHTML = htmlValue;
+
+    // Restore selection if it was previously set
+    if (selection) {
+      setTimeout(() => {
+        quillInstance.setSelection(selection.index, selection.length);
+        isSelfUpdateRef.current = false;
+      }, 0);
+    } else {
+      isSelfUpdateRef.current = false;
+    }
+  }, [quillInstance, value, htmlValue]);
+
   // Format tracking state
   const [formatState, setFormatState] = useState({
     bold: false,
     italic: false,
     underline: false,
     link: false,
-  });
-
-  // Set initial value only once
-  useEffect(() => {
-    if (value !== undefined && htmlValue === "") {
-      const newHtml = showdownConverter.makeHtml(value);
-      setHtmlValue(newHtml);
-    }
-  }, []);
-
-  // Custom onChange handler to convert HTML back to Markdown
-  const handleChange = (html: string) => {
-    setHtmlValue(html);
-    if (onChange) {
-      // Convert HTML to Markdown before calling onChange
-      const markdownContent = turndownService.turndown(html);
-      onChange(markdownContent);
-    }
-  };
-
-  const { quillRef, quillInstance, editorState, setEditorState, clearContent, focus, blur } = useDynamicTextEditor({
-    value: htmlValue,
-    onChange: handleChange,
-    suggestions,
-    toolbar: false,
-    ...props,
   });
 
   // Update format state on selection change
@@ -244,11 +297,24 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   }, [quillInstance]);
 
   // Method to programmatically set value
-  const setValue = (newValue: string) => {
-    const newHtml = showdownConverter.makeHtml(newValue);
-    setHtmlValue(newHtml);
-    setEditorState(newHtml);
-  };
+  const setValue = useCallback(
+    (newValue: string) => {
+      const newHtml = showdownConverter.makeHtml(newValue);
+      lastHtmlValueRef.current = newHtml;
+      lastMarkdownValueRef.current = newValue;
+
+      if (quillInstance) {
+        isSelfUpdateRef.current = true;
+        quillInstance.root.innerHTML = newHtml;
+        isSelfUpdateRef.current = false;
+      }
+
+      if (onChange) {
+        onChange(newValue);
+      }
+    },
+    [quillInstance, onChange]
+  );
 
   // Format handlers for custom toolbar
   const handleBold = () => {
@@ -358,7 +424,18 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   );
 };
 
-export const DynamicTextEditor = forwardRef<DynamicTextEditorRef, DynamicTextEditorProps>(DynamicTextEditorBase);
+// Correct way to apply React.memo with forwardRef
+export const DynamicTextEditor = React.memo(forwardRef<DynamicTextEditorRef, DynamicTextEditorProps>(DynamicTextEditorBase), (prevProps, nextProps) => {
+  // Custom comparison function
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.readOnly === nextProps.readOnly &&
+    prevProps.suggestions === nextProps.suggestions &&
+    prevProps.placeholder === nextProps.placeholder &&
+    prevProps.showCustomToolbar === nextProps.showCustomToolbar
+  );
+});
+
 DynamicTextEditor.displayName = "DynamicTextEditor";
 
 export default DynamicTextEditor;
