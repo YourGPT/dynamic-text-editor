@@ -24,6 +24,26 @@ turndownService.addRule("paragraph", {
   },
 });
 
+// Add rule to prevent escaping underscores
+turndownService.escape = function (string) {
+  return string
+    .replace(/\\/g, "\\\\")
+    .replace(/\*/g, "\\*")
+    .replace(/^-/g, "\\-")
+    .replace(/^\+ /g, "\\+ ")
+    .replace(/^(=+)/g, "\\$1")
+    .replace(/^(#{1,6}) /g, "\\$1 ")
+    .replace(/`/g, "\\`")
+    .replace(/^~~~/g, "\\~~~")
+    .replace(/\[/g, "\\[")
+    .replace(/\]/g, "\\]")
+    .replace(/^>/g, "\\>")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+  // Notice that we don't escape underscores here
+  // No _
+};
+
 const showdownConverter = new Showdown.Converter({
   simpleLineBreaks: true,
   strikethrough: true,

@@ -130,7 +130,7 @@ const usePaint = ({ quillInstance, trigger = "{{", closingChar = "}}" }: UsePain
     timeoutIdRef.current = setTimeout(() => {
       highlightTemplates();
       timeoutIdRef.current = null;
-    }, 200); // Increased delay to reduce chances of loop
+    }, 50); // Increased delay to reduce chances of loop
   }, [highlightTemplates]);
 
   // Monitor text changes to detect and highlight templates

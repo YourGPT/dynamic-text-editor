@@ -46,6 +46,7 @@ function App() {
                 suggestions={defaultSuggestions}
                 classNames={{
                   container: "max-h-[400px] overflow-y-auto border border-border rounded-md bg-background/50 [&>div]:p-4",
+                  editor: "text-sm",
                 }}
                 className=""
                 showCustomToolbar
