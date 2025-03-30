@@ -191,6 +191,13 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
 
   // Convert markdown to HTML only when the value changes
   const htmlValue = useMemo(() => {
+    // Handle empty/falsy values explicitly
+    if (value === "" || value === null || value === undefined) {
+      lastMarkdownValueRef.current = "";
+      lastHtmlValueRef.current = "";
+      return "";
+    }
+
     if (value === lastMarkdownValueRef.current) {
       return lastHtmlValueRef.current;
     }
@@ -201,10 +208,21 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
     return newHtml;
   }, [value]);
 
-  // Custom onChange handler with debouncing
-  const debouncedOnChange = useCallback(
+  // Custom onChange handler without debouncing
+  const handleChange = useCallback(
     (html: string) => {
       if (isSelfUpdateRef.current) return;
+
+      // Special handling for empty content
+      if (!html || html === "<p><br></p>" || html === "<p></p>" || html.trim() === "") {
+        lastHtmlValueRef.current = "";
+        lastMarkdownValueRef.current = "";
+
+        if (onChange) {
+          onChange("");
+        }
+        return;
+      }
 
       const markdownContent = turndownService.turndown(html);
       lastHtmlValueRef.current = html;
@@ -219,7 +237,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
 
   const { quillRef, quillInstance, editorState, setEditorState, clearContent, focus, blur } = useDynamicTextEditor({
     value: htmlValue,
-    onChange: debouncedOnChange,
+    onChange: handleChange,
     suggestions,
     toolbar: false,
     ...props,
@@ -241,18 +259,31 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
 
   // Update editor content when value changes
   useEffect(() => {
-    if (!quillInstance || !value || isSelfUpdateRef.current) return;
+    if (!quillInstance || isSelfUpdateRef.current) return;
 
-    // If the value hasn't changed in Markdown form, don't update
-    if (value === lastMarkdownValueRef.current && lastHtmlValueRef.current === quillInstance.root.innerHTML) {
-      return;
-    }
+    // Handle empty values explicitly
+    const valueIsEmpty = value === "" || value === null || value === undefined;
+    const shouldUpdate = valueIsEmpty || value !== lastMarkdownValueRef.current || lastHtmlValueRef.current !== quillInstance.root.innerHTML;
+
+    if (!shouldUpdate) return;
 
     const selection = selectionRef.current || quillInstance.getSelection();
     isSelfUpdateRef.current = true;
 
-    // Update content
-    quillInstance.root.innerHTML = htmlValue;
+    // Update content - handle empty value explicitly
+    if (valueIsEmpty) {
+      quillInstance.setText("");
+    } else {
+      quillInstance.root.innerHTML = htmlValue;
+    }
+
+    // Update refs
+    lastMarkdownValueRef.current = value || "";
+
+    // For empty content, set the HTML value to empty as well
+    if (valueIsEmpty) {
+      lastHtmlValueRef.current = "";
+    }
 
     // Restore selection if it was previously set
     if (selection) {
@@ -299,6 +330,23 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   // Method to programmatically set value
   const setValue = useCallback(
     (newValue: string) => {
+      // Handle empty value case
+      if (newValue === "" || newValue === null || newValue === undefined) {
+        lastHtmlValueRef.current = "";
+        lastMarkdownValueRef.current = "";
+
+        if (quillInstance) {
+          isSelfUpdateRef.current = true;
+          quillInstance.setText("");
+          isSelfUpdateRef.current = false;
+        }
+
+        if (onChange) {
+          onChange("");
+        }
+        return;
+      }
+
       const newHtml = showdownConverter.makeHtml(newValue);
       lastHtmlValueRef.current = newHtml;
       lastMarkdownValueRef.current = newValue;

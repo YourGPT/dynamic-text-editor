@@ -77,32 +77,19 @@ export const useDynamicTextEditor = ({
   // Add a flag to track if we're manually modifying text
   const isModifyingText = useRef<boolean>(false);
 
-  // Add at the top of your hook
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   // Handle text change events
   const handleTextChange = useCallback(
     (html: string) => {
       // Skip if we're programmatically modifying
       if (isModifyingText.current) return;
 
-      // Clear any pending updates
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      // Update our local state immediately
+      setEditorState(html);
+
+      // Call the onChange callback with the HTML content
+      if (onChange) {
+        onChange(html);
       }
-
-      // Debounce the update
-      timeoutRef.current = setTimeout(() => {
-        // Update our local state
-        setEditorState(html);
-
-        // Call the onChange callback with the HTML content
-        if (onChange) {
-          onChange(html);
-        }
-
-        timeoutRef.current = null;
-      }, 100); // 100ms debounce
     },
     [onChange]
   );
