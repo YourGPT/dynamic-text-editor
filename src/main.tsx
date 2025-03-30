@@ -7,6 +7,8 @@ import { defaultSuggestions } from "./utils/constants";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <DynamicTextEditor onChange={() => {}} value={""} suggestions={defaultSuggestions} classNames={{}} showCustomToolbar />
+    <div className="container">
+      <DynamicTextEditor onChange={() => {}} value={""} suggestions={defaultSuggestions} classNames={{}} className="dynamic-text-editor-demo" showCustomToolbar />
+    </div>
   </StrictMode>
 );

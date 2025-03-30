@@ -97,4 +97,26 @@ body {
   background-color: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--fontFamily);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.dynamic-text-editor-demo {
+  width: 100%;
+  width: 600px;
+  margin: 0 auto;
+  padding: 0 20px;
+  background-color: hsl(var(--color-background));
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--color-border));
+  padding: 20px;
 }

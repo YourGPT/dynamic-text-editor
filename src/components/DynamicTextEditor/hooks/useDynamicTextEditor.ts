@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { DynamicTextEditorProps, BaseEditorItem } from "../types";
-import { useSuggestions } from "./useSuggestions";
 import usePaint from "./usePaint";
 import useQuill from "./useQuill";
 import Quill from "quill";
@@ -112,13 +111,22 @@ export const useDynamicTextEditor = ({
     onTextChange: handleTextChange,
   });
 
-  // Use the suggestions hook
-  const { suggestionState, insertSuggestion: insertSuggestionFromHook } = useSuggestions({
-    quillInstance,
-    suggestions,
-    trigger: suggestionTrigger,
-    closingChar: suggestionClosing,
-  });
+  // We no longer use useSuggestions hook
+  // Instead we'll use the integrated Suggestions component
+  // Define a stub for the suggestionState to maintain compatibility
+  const suggestionState = {
+    isOpen: false,
+    items: suggestions,
+    filteredItems: suggestions,
+    selectedIndex: 0,
+    triggerPosition: { top: 0, left: 0 },
+  };
+
+  // Stub for insertSuggestion function - will be handled by Suggestions component
+  const insertSuggestion = useCallback((item: BaseEditorItem) => {
+    console.log("insertSuggestion called with:", item);
+    // This is now handled directly in the Suggestions component
+  }, []);
 
   // Use the template highlighting hook
   const { highlightTemplates } = usePaint({
@@ -252,83 +260,14 @@ export const useDynamicTextEditor = ({
     [setContent, highlightTemplates]
   );
 
-  // Utility functions
-  const focus = useCallback(() => {
-    quillInstance?.focus();
-  }, [quillInstance]);
-
-  const blur = useCallback(() => {
-    if (quillInstance) {
-      (quillInstance.root as HTMLElement).blur();
-    }
-  }, [quillInstance]);
-
-  // Modified wrapper for insertSuggestion
-  const insertSuggestion = useCallback(
-    (item: BaseEditorItem) => {
-      if (!quillInstance) return;
-
-      try {
-        // Set flag to indicate we're manually modifying text
-        isModifyingText.current = true;
-
-        // First focus the editor
-        quillInstance.focus();
-
-        // Use a small delay to ensure focus has taken effect
-        setTimeout(() => {
-          try {
-            // Insert the suggestion
-            insertSuggestionFromHook(item);
-
-            // Apply highlighting after insertion with another delay
-            // to ensure the content is fully updated
-            setTimeout(() => {
-              try {
-                // Apply any necessary highlighting
-                highlightTemplates();
-
-                // Wait a bit more before allowing Markdown processing again
-                // This ensures all DOM operations are complete
-                setTimeout(() => {
-                  // Reset the modification flag when completely done
-                  isModifyingText.current = false;
-                }, 50);
-              } catch (error) {
-                console.error("Error in final suggestion processing:", error);
-                isModifyingText.current = false;
-              }
-            }, 30);
-          } catch (error) {
-            console.error("Error inserting suggestion:", error);
-            isModifyingText.current = false;
-          }
-        }, 10);
-      } catch (error) {
-        console.error("Error in insertSuggestion:", error);
-        isModifyingText.current = false;
-      }
-    },
-    [insertSuggestionFromHook, highlightTemplates, quillInstance]
-  );
-
   return {
     quillRef: containerRef,
     quillInstance,
     editorState,
     setEditorState: updateEditorState,
-    clearContent: () => {
-      isModifyingText.current = true;
-      clearContent();
-      setTimeout(() => {
-        highlightTemplates();
-        setTimeout(() => {
-          isModifyingText.current = false;
-        }, 50);
-      }, 10);
-    },
-    focus,
-    blur,
+    clearContent,
+    focus: useCallback(() => quillInstance?.focus(), [quillInstance]),
+    blur: useCallback(() => quillInstance?.blur(), [quillInstance]),
     suggestionState,
     insertSuggestion,
     processMarkdown,

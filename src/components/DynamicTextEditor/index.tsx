@@ -139,7 +139,7 @@ const ToolbarButton = styled.button<{ $active?: boolean }>`
 `;
 
 const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, DynamicTextEditorProps> = (
-  { className = "", classNames, suggestions, renderItem, value, onChange, minSuggestionWidth, maxSuggestionWidth, maxSuggestionHeight, showCustomToolbar = false, ...props },
+  { className = "", classNames, suggestions, renderItem, value, onChange, minSuggestionWidth, maxSuggestionWidth, maxSuggestionHeight, showCustomToolbar = false, suggestionTrigger = "{{", suggestionClosing = "}}", ...props },
   ref
 ) => {
   // Store the HTML representation of the Markdown internally
@@ -170,7 +170,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
     }
   };
 
-  const { quillRef, quillInstance, editorState, setEditorState, clearContent, focus, blur, suggestionState, insertSuggestion } = useDynamicTextEditor({
+  const { quillRef, quillInstance, editorState, setEditorState, clearContent, focus, blur } = useDynamicTextEditor({
     value: htmlValue,
     onChange: handleChange,
     suggestions,
@@ -294,17 +294,19 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
       <EditorContent ref={quillRef} className={`dynamic-text-editor-container ${classNames?.container || ""}`} />
 
       <Suggestions
-        isOpen={suggestionState.isOpen}
-        items={suggestionState.filteredItems || suggestionState.items}
-        position={suggestionState.triggerPosition}
-        selectedIndex={suggestionState.selectedIndex}
-        onSelect={insertSuggestion}
+        quillInstance={quillInstance}
+        suggestions={suggestions}
+        trigger={suggestionTrigger}
+        closingChar={suggestionClosing}
         renderItem={renderItem}
         classNames={{
           suggestions: classNames?.suggestions,
           suggestion: classNames?.suggestion,
           suggestionSelected: classNames?.suggestionSelected,
           suggestionHovered: classNames?.suggestionHovered,
+          category: classNames?.category,
+          description: classNames?.description,
+          container: classNames?.container,
         }}
         maxHeight={maxSuggestionHeight}
         minWidth={minSuggestionWidth}

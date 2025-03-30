@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { BaseEditorItem } from "./types";
 import { styled, keyframes } from "styled-components";
+import Quill from "quill";
 
 interface SuggestionsProps {
-  isOpen: boolean;
-  items: BaseEditorItem[];
-  position: { top: number; left: number };
-  selectedIndex: number;
-  onSelect: (item: BaseEditorItem) => void;
+  quillInstance: Quill | null;
+  suggestions: BaseEditorItem[];
+  trigger: string;
+  closingChar?: string;
   renderItem?: (item: BaseEditorItem, isSelected: boolean, isHovered: boolean) => React.ReactNode;
   classNames?: {
     suggestions?: string;
@@ -16,10 +16,13 @@ interface SuggestionsProps {
     suggestionHovered?: string;
     category?: string;
     description?: string;
+    container?: string;
   };
   maxHeight?: number;
   minWidth?: number;
   maxWidth?: number;
+  onValueUpdate?: (value: string) => void;
+  className?: string;
 }
 
 // Animations
@@ -162,14 +165,6 @@ const EnhancedItem = styled.div`
   display: flex;
   justify-content: space-between;
   gap: 8px;
-
-  /* &.selected {
-    background-color: hsl(var(--primary) / 0.1);
-  } */
-  /* 
-  &:hover {
-    background-color: hsl(var(--primary) / 0.05);
-  } */
 
   &:last-child {
     border-bottom: none;
@@ -345,16 +340,414 @@ const EnhancedSuggestionItemComponent = ({
   );
 };
 
-export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, position, selectedIndex, onSelect, renderItem, classNames, maxHeight = 300, minWidth = 200, maxWidth = 400 }) => {
+/**
+ * Enhanced Suggestions component with integrated suggestion management
+ */
+export const Suggestions: React.FC<SuggestionsProps> = ({ quillInstance, suggestions, trigger = "{{", closingChar = "}}", renderItem, classNames, maxHeight = 300, minWidth = 200, maxWidth = 400 }) => {
+  // State for suggestions dropdown
+  const [state, setState] = useState({
+    isOpen: false,
+    items: suggestions,
+    filteredItems: suggestions,
+    query: "",
+    selectedIndex: 0,
+    triggerPosition: { top: 0, left: 0 },
+  });
+
+  // Refs for tracking positions and selection
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selectedItemRef = useRef<HTMLDivElement>(null);
+  const triggerPositionRef = useRef<number | null>(null);
+  const selectedIndexRef = useRef<number>(0);
+  const lastUsedIndexRef = useRef<number>(0);
+  const prevQueryRef = useRef<string>("");
+  const prevIsOpenRef = useRef<boolean>(false);
+
+  // State for tracking hover in the dropdown
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const previousSelectedIndex = useRef<number>(-1); // Start with -1 to ensure first render scrolls
+  const previousSelectedIndex = useRef<number>(-1);
   const isFirstRender = useRef<boolean>(true);
+
+  // Function to check for trigger characters in the text
+  const checkForTrigger = useCallback(() => {
+    if (!quillInstance) return;
+
+    const selection = quillInstance.getSelection();
+    if (!selection) return;
+
+    const cursorPosition = selection.index;
+    const text = quillInstance.getText();
+
+    // Check if we just typed the trigger character
+    const beforeCursor = text.slice(Math.max(0, cursorPosition - trigger.length), cursorPosition);
+
+    if (beforeCursor === trigger) {
+      const bounds = quillInstance.getBounds(cursorPosition);
+      if (!bounds) return false;
+
+      // Get the editor's position
+      const editorRect = quillInstance.root.getBoundingClientRect();
+
+      // Store trigger position for later use
+      triggerPositionRef.current = cursorPosition - trigger.length;
+
+      // Use the last used index instead of resetting to 0
+      const indexToUse = lastUsedIndexRef.current;
+      selectedIndexRef.current = indexToUse;
+
+      // Guard: Only update if not already open with empty query
+      if (!prevIsOpenRef.current || prevQueryRef.current !== "") {
+        setState((prev) => ({
+          ...prev,
+          isOpen: true,
+          query: "",
+          filteredItems: suggestions,
+          selectedIndex: indexToUse, // Use stored index instead of 0
+          triggerPosition: {
+            top: editorRect.top + bounds.top + bounds.height + 5, // Add 5px padding
+            left: editorRect.left + bounds.left,
+          },
+        }));
+      }
+
+      return true;
+    }
+
+    // Check if we're inside an existing template that's being typed
+    const textBeforeCursor = text.slice(0, cursorPosition);
+    const lastTriggerPos = textBeforeCursor.lastIndexOf(trigger);
+
+    if (lastTriggerPos >= 0) {
+      const hasClosing = text.indexOf(closingChar, lastTriggerPos) > -1;
+      if (!hasClosing || text.indexOf(closingChar, lastTriggerPos) > cursorPosition) {
+        const query = text.slice(lastTriggerPos + trigger.length, cursorPosition);
+
+        // Guard: If the query hasn't changed and dropdown is already open, don't update state
+        if (query === prevQueryRef.current && prevIsOpenRef.current) {
+          return true;
+        }
+
+        const bounds = quillInstance.getBounds(lastTriggerPos);
+        if (!bounds) return false;
+
+        // Get the editor's position
+        const editorRect = quillInstance.root.getBoundingClientRect();
+
+        // Store trigger position for later use
+        triggerPositionRef.current = lastTriggerPos;
+
+        const filteredItems = suggestions.filter((item) => item.label.toLowerCase().includes(query.toLowerCase()) || item.value.toLowerCase().includes(query.toLowerCase()));
+
+        // When filtering changes we do reset the index for better UX
+        const indexToUse = 0;
+        selectedIndexRef.current = indexToUse;
+
+        setState((prev) => ({
+          ...prev,
+          isOpen: true,
+          query,
+          filteredItems,
+          selectedIndex: indexToUse,
+          triggerPosition: {
+            top: editorRect.top + bounds.top + bounds.height + 5, // Add 5px padding
+            left: editorRect.left + bounds.left,
+          },
+        }));
+
+        return true;
+      }
+    }
+
+    // Don't close if it's already closed (guard against unnecessary updates)
+    if (!prevIsOpenRef.current) {
+      return false;
+    }
+
+    setState((prev) => ({ ...prev, isOpen: false }));
+    triggerPositionRef.current = null;
+    return false;
+  }, [quillInstance, suggestions, trigger, closingChar]);
+
+  // Insert text at the trigger position
+  const insertAtTrigger = useCallback(
+    (content: string, triggerPos: number) => {
+      if (!quillInstance) return;
+
+      try {
+        // Focus the editor first to ensure it's ready to receive changes
+        quillInstance.focus();
+
+        // Small delay to ensure focus has taken effect
+        setTimeout(() => {
+          try {
+            // Get current selection to calculate what to delete
+            let selection = quillInstance.getSelection();
+            if (!selection) {
+              // If no selection, set one at the trigger position
+              quillInstance.setSelection(triggerPos, 0);
+
+              // Short delay to ensure selection is set
+              setTimeout(() => {
+                try {
+                  // Try getting selection again
+                  selection = quillInstance.getSelection();
+
+                  // If still null, use a default
+                  if (!selection) {
+                    // Create a safe default
+                    selection = { index: triggerPos, length: 0 };
+                  }
+
+                  // Calculate delete length (from trigger to cursor)
+                  const deleteLength = selection.index - triggerPos + selection.length;
+                  if (deleteLength > 0) {
+                    quillInstance.deleteText(triggerPos, deleteLength);
+                  }
+
+                  // Insert the new content
+                  quillInstance.insertText(triggerPos, content);
+
+                  // Move cursor after the inserted content
+                  quillInstance.setSelection(triggerPos + content.length, 0);
+                } catch (error) {
+                  console.error("Error in delayed insertion:", error);
+                }
+              }, 10);
+            } else {
+              // We have a selection, proceed normally
+              const deleteLength = selection.index - triggerPos + selection.length;
+              if (deleteLength > 0) {
+                quillInstance.deleteText(triggerPos, deleteLength);
+              }
+
+              // Insert the new content
+              quillInstance.insertText(triggerPos, content);
+
+              // Move cursor after the inserted content
+              quillInstance.setSelection(triggerPos + content.length, 0);
+            }
+          } catch (error) {
+            console.error("Error inserting content:", error);
+          }
+        }, 10);
+      } catch (error) {
+        console.error("Error in insertAtTrigger:", error);
+      }
+    },
+    [quillInstance]
+  );
+
+  // Insert the selected suggestion
+  const insertSuggestion = useCallback(
+    (item: BaseEditorItem) => {
+      if (!quillInstance || triggerPositionRef.current === null) return;
+
+      // Save the current index before closing
+      const currentIndex = selectedIndexRef.current;
+      lastUsedIndexRef.current = currentIndex;
+
+      // First make sure we close the dropdown
+      setState((prev) => ({ ...prev, isOpen: false }));
+
+      // Wait a moment for the UI to update
+      setTimeout(() => {
+        try {
+          // Focus editor first
+          quillInstance.focus();
+
+          // Create the full template text
+          const templateText = `${trigger}${item.value}${closingChar}`;
+
+          // Insert at the stored trigger position
+          insertAtTrigger(templateText, triggerPositionRef.current as number);
+
+          // Reset the trigger position
+          triggerPositionRef.current = null;
+        } catch (error) {
+          console.error("Error inserting suggestion:", error);
+        }
+      }, 0);
+    },
+    [quillInstance, trigger, closingChar, insertAtTrigger]
+  );
+
+  // Handle keyboard navigation
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!state.isOpen) return;
+
+      console.log(`Key pressed: ${e.key}, current index: ${selectedIndexRef.current}, items: ${state.filteredItems.length}`);
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          e.stopPropagation();
+          {
+            // Calculate new index using the ref for current value
+            const nextDownIndex = Math.min(selectedIndexRef.current + 1, state.filteredItems.length - 1);
+            console.log(`🔽 ArrowDown: ${selectedIndexRef.current} → ${nextDownIndex}`);
+
+            // Update both the ref and the state
+            selectedIndexRef.current = nextDownIndex;
+            lastUsedIndexRef.current = nextDownIndex;
+            setState((prev) => ({
+              ...prev,
+              selectedIndex: nextDownIndex,
+            }));
+          }
+          break;
+
+        case "ArrowUp":
+          e.preventDefault();
+          e.stopPropagation();
+          {
+            // Calculate new index using the ref for current value
+            const nextUpIndex = Math.max(selectedIndexRef.current - 1, 0);
+            console.log(`🔼 ArrowUp: ${selectedIndexRef.current} → ${nextUpIndex}`);
+
+            // Update both the ref and the state
+            selectedIndexRef.current = nextUpIndex;
+            lastUsedIndexRef.current = nextUpIndex;
+            setState((prev) => ({
+              ...prev,
+              selectedIndex: nextUpIndex,
+            }));
+          }
+          break;
+
+        case "Enter":
+        case "Tab":
+          e.preventDefault();
+          e.stopPropagation();
+          {
+            // Use the ref to ensure we have the latest index
+            const currentIndex = selectedIndexRef.current;
+            lastUsedIndexRef.current = currentIndex;
+
+            if (state.filteredItems[currentIndex]) {
+              console.log(`Inserting: ${state.filteredItems[currentIndex].label}`);
+              insertSuggestion(state.filteredItems[currentIndex]);
+            } else {
+              console.error(`No item at index ${currentIndex}`);
+            }
+          }
+          break;
+
+        case "Escape":
+          e.preventDefault();
+          e.stopPropagation();
+          setState((prev) => ({ ...prev, isOpen: false }));
+          break;
+      }
+    },
+    [state.isOpen, state.filteredItems, insertSuggestion]
+  );
+
+  // Keep selectedIndexRef in sync with state
+  useEffect(() => {
+    selectedIndexRef.current = state.selectedIndex;
+    // Also update lastUsedIndexRef when the dropdown is open
+    if (state.isOpen) {
+      lastUsedIndexRef.current = state.selectedIndex;
+    }
+
+    // Update previous state refs
+    prevQueryRef.current = state.query;
+    prevIsOpenRef.current = state.isOpen;
+  }, [state.selectedIndex, state.isOpen, state.query]);
+
+  // Add keyboard event listeners when dropdown is open
+  useEffect(() => {
+    if (!state.isOpen) return;
+
+    console.log(`🎹 Keyboard navigation attached, selectedIndex: ${state.selectedIndex}, lastUsedIndex: ${lastUsedIndexRef.current}`);
+
+    // Add event listener with capture to ensure we get the event first
+    document.addEventListener("keydown", handleKeyDown, true);
+
+    return () => {
+      console.log("🎹 Keyboard navigation detached");
+      document.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [state.isOpen, handleKeyDown]);
+
+  // Setup Quill text-change handler
+  useEffect(() => {
+    if (!quillInstance) return;
+
+    const handleTextChange = () => {
+      checkForTrigger();
+    };
+
+    quillInstance.on("text-change", handleTextChange);
+    quillInstance.on("selection-change", handleTextChange);
+
+    return () => {
+      quillInstance.off("text-change", handleTextChange);
+      quillInstance.off("selection-change", handleTextChange);
+    };
+  }, [quillInstance, checkForTrigger]);
+
+  // Handle editor blur
+  const handleEditorBlur = useCallback((event: FocusEvent) => {
+    // Check if the related target is part of the suggestions dropdown
+    const relatedTarget = event.relatedTarget as HTMLElement;
+    if (relatedTarget?.closest(".suggestions-dropdown")) {
+      return;
+    }
+
+    setState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  // Setup editor blur handler
+  useEffect(() => {
+    if (!quillInstance) return;
+
+    quillInstance.root.addEventListener("blur", handleEditorBlur);
+
+    return () => {
+      quillInstance.root.removeEventListener("blur", handleEditorBlur);
+    };
+  }, [quillInstance, handleEditorBlur]);
+
+  // Document click handler
+  const handleDocumentClick = useCallback((e: MouseEvent) => {
+    // Check if the click was on a link
+    const target = e.target as HTMLElement;
+
+    // Don't close the dropdown if clicking on a link or link container
+    if (target.tagName === "A" || target.closest("a")) {
+      console.log("Click on link detected, keeping dropdown open");
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    // Check if clicking inside the suggestions dropdown
+    if (target.closest(".suggestions-dropdown")) {
+      console.log("Click inside dropdown detected, keeping open");
+      return;
+    }
+
+    // For any other click, close the dropdown
+    console.log("Outside click detected, closing dropdown");
+    setState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  // Add document click listener
+  useEffect(() => {
+    if (!state.isOpen) return;
+
+    document.addEventListener("mousedown", handleDocumentClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentClick);
+    };
+  }, [state.isOpen, handleDocumentClick]);
 
   // Handle viewport positioning
   useEffect(() => {
-    if (!isOpen || !dropdownRef.current) return;
+    if (!state.isOpen || !dropdownRef.current) return;
 
     try {
       // Adjust position to ensure dropdown is visible
@@ -364,44 +757,44 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
       const viewportWidth = window.innerWidth;
 
       // Check if dropdown would go below viewport
-      if (position.top + rect.height > viewportHeight) {
-        dropdown.style.top = `${position.top - rect.height}px`;
+      if (state.triggerPosition.top + rect.height > viewportHeight) {
+        dropdown.style.top = `${state.triggerPosition.top - rect.height}px`;
       } else {
-        dropdown.style.top = `${position.top + window.scrollY}px`;
+        dropdown.style.top = `${state.triggerPosition.top + window.scrollY}px`;
       }
 
       // Check if dropdown would go beyond right edge
-      if (position.left + rect.width > viewportWidth) {
+      if (state.triggerPosition.left + rect.width > viewportWidth) {
         dropdown.style.left = `${viewportWidth - rect.width - 10}px`;
       } else {
-        dropdown.style.left = `${position.left}px`;
+        dropdown.style.left = `${state.triggerPosition.left}px`;
       }
     } catch (error) {
       console.error("Error positioning dropdown:", error);
     }
-  }, [isOpen, position]);
+  }, [state.isOpen, state.triggerPosition]);
 
   // Scroll to selected item whenever dropdown opens or selectedIndex changes
   useEffect(() => {
-    if (!isOpen || !selectedItemRef.current) return;
+    if (!state.isOpen || !selectedItemRef.current) return;
 
     // On first render when dropdown opens, always scroll
-    if (isFirstRender.current && isOpen) {
+    if (isFirstRender.current && state.isOpen) {
       isFirstRender.current = false;
       try {
-        console.log(`📌 Initial scroll to item ${selectedIndex} of ${items.length}`);
+        console.log(`📌 Initial scroll to item ${state.selectedIndex} of ${state.filteredItems.length}`);
         selectedItemRef.current.scrollIntoView({
           block: "nearest",
         });
       } catch (error) {
         console.error("Error during initial scroll:", error);
       }
-      previousSelectedIndex.current = selectedIndex;
+      previousSelectedIndex.current = state.selectedIndex;
       return;
     }
 
     // On subsequent renders, only scroll when selectedIndex changes
-    if (previousSelectedIndex.current !== selectedIndex) {
+    if (previousSelectedIndex.current !== state.selectedIndex) {
       try {
         selectedItemRef.current.scrollIntoView({
           block: "nearest",
@@ -410,21 +803,31 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
         console.error("Error scrolling to selection:", error);
       }
 
-      previousSelectedIndex.current = selectedIndex;
+      previousSelectedIndex.current = state.selectedIndex;
     }
-  }, [isOpen, selectedIndex, items.length]);
+  }, [state.isOpen, state.selectedIndex, state.filteredItems.length]);
 
   // Reset first render flag when dropdown closes
   useEffect(() => {
-    if (!isOpen) {
+    if (!state.isOpen) {
       isFirstRender.current = true;
     }
-  }, [isOpen]);
+  }, [state.isOpen]);
 
   // Reset hovered index when dropdown opens/closes or selection changes
   useEffect(() => {
     setHoveredIndex(null);
-  }, [isOpen, selectedIndex, items]);
+  }, [state.isOpen, state.selectedIndex, state.filteredItems]);
+
+  // Handle mouse enter for hover effect
+  const handleItemMouseEnter = useCallback((index: number) => {
+    setHoveredIndex(index);
+  }, []);
+
+  // Handle mouse leave for hover effect
+  const handleItemMouseLeave = useCallback(() => {
+    setHoveredIndex(null);
+  }, []);
 
   // Safe way to handle item selection
   const handleItemSelect = useCallback(
@@ -432,13 +835,13 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
       try {
         // Create a promise to handle the selection
         setTimeout(() => {
-          onSelect(item);
+          insertSuggestion(item);
         }, 10);
       } catch (error) {
         console.error("Error selecting item:", error);
       }
     },
-    [onSelect]
+    [insertSuggestion]
   );
 
   // Safer mousedown handler
@@ -465,16 +868,6 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
     [handleItemSelect]
   );
 
-  // Handle mouse enter for hover effect
-  const handleItemMouseEnter = useCallback((index: number) => {
-    setHoveredIndex(index);
-  }, []);
-
-  // Handle mouse leave for hover effect
-  const handleItemMouseLeave = useCallback(() => {
-    setHoveredIndex(null);
-  }, []);
-
   // Prevent container events from propagating
   const handleContainerMouseDown = useCallback((e: React.MouseEvent) => {
     // Check if the click was on a link
@@ -489,17 +882,18 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
     e.stopPropagation();
   }, []);
 
-  if (!isOpen || !items || items.length === 0) {
+  // Don't render anything if not open or if no items
+  if (!state.isOpen || !state.filteredItems || state.filteredItems.length === 0) {
     return null;
   }
 
   return (
     <SuggestionsDropdown
       ref={dropdownRef}
-      className={classNames?.suggestions}
+      className={`suggestions-dropdown ${classNames?.suggestions || ""}`}
       style={{
-        top: position.top + window.scrollY,
-        left: position.left,
+        top: state.triggerPosition.top + window.scrollY,
+        left: state.triggerPosition.left,
         maxHeight,
         minWidth,
         maxWidth,
@@ -507,8 +901,8 @@ export const Suggestions: React.FC<SuggestionsProps> = ({ isOpen, items, positio
       onMouseDown={handleContainerMouseDown}
       data-testid="suggestions-dropdown"
     >
-      {items.map((item, index) => {
-        const isSelected = index === selectedIndex;
+      {state.filteredItems.map((item, index) => {
+        const isSelected = index === state.selectedIndex;
         const isHovered = index === hoveredIndex;
         const hasCustomRenderer = !!renderItem;
 
