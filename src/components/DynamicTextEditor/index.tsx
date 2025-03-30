@@ -428,6 +428,27 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
     setValue,
   }));
 
+  // Add this new useEffect after the quillInstance is initialized
+  // This specifically handles the initial value when the component first mounts
+  useEffect(() => {
+    if (!quillInstance || !value) return;
+
+    // Only run this once on initialization
+    if (lastHtmlValueRef.current === "") {
+      isSelfUpdateRef.current = true;
+
+      // Set initial content
+      const initialHtml = showdownConverter.makeHtml(value);
+      quillInstance.root.innerHTML = initialHtml;
+
+      // Update refs
+      lastHtmlValueRef.current = initialHtml;
+      lastMarkdownValueRef.current = value;
+
+      isSelfUpdateRef.current = false;
+    }
+  }, [quillInstance, value]); // This will run once when quillInstance is available
+
   return (
     <EditorContainer className={`dynamic-text-editor ${className}`}>
       {showCustomToolbar && (

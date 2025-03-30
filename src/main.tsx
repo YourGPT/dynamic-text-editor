@@ -6,7 +6,7 @@ import "./utils/demo.css";
 import { defaultSuggestions } from "./utils/constants";
 
 const Demo = () => {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState("Hello {{name}}");
 
   return (
     <div className="dynamic-text-editor-demo">
