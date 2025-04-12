@@ -422,7 +422,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
 
   return (
     <EditorContainer className={`dynamic-text-editor ${className}`}>
-      {showCustomToolbar && (
+      {/* {showCustomToolbar && (
         <CustomToolbar className="dynamic-text-editor-custom-toolbar">
           <ToolbarButton type="button" onClick={handleBold} $active={formatState.bold} title="Bold">
             <strong>B</strong>
@@ -437,7 +437,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
             🔗
           </ToolbarButton>
         </CustomToolbar>
-      )}
+      )} */}
 
       <EditorContent ref={quillRef} className={`dynamic-text-editor-container ${classNames?.container || ""}`} />
 
