@@ -3,7 +3,7 @@ import { DynamicTextEditorProps, BaseEditorItem } from "../types";
 import usePaint from "./usePaint";
 import useQuill from "./useQuill";
 import Quill from "quill";
-import useMarkdownShortcuts from "./useMarkdownShortcuts";
+// import useMarkdownShortcuts from "./useMarkdownShortcuts";
 
 import { ToolbarConfig } from "../types";
 
@@ -38,7 +38,7 @@ type useDynamicTextEditorReturn = {
   blur: () => void;
   suggestionState: SuggestionState;
   insertSuggestion: (item: BaseEditorItem) => void;
-  processMarkdown: (text: string) => void;
+  // processMarkdown: (text: string) => void;
 };
 
 interface SuggestionState {
@@ -56,7 +56,6 @@ export const useDynamicTextEditor = ({
   placeholder = "Write something...",
   value,
   defaultValue = "",
-  readOnly = false,
   fontSize = "1rem",
   lineHeight = "1.5",
   width = "100%",
@@ -81,6 +80,7 @@ export const useDynamicTextEditor = ({
   const handleTextChange = useCallback(
     (html: string) => {
       // Skip if we're programmatically modifying
+      console.log("html", html);
       if (isModifyingText.current) return;
 
       // Update our local state immediately
@@ -104,8 +104,8 @@ export const useDynamicTextEditor = ({
     container: containerRef,
     theme,
     placeholder,
-    readOnly,
-    formats: [...formats, "template-variable"],
+    // readOnly,
+    formats: ["template-variable"],
     toolbar: toolbar === true ? defaultToolbarOptions : toolbar,
     defaultValue: value || defaultValue,
     onTextChange: handleTextChange,
@@ -136,7 +136,7 @@ export const useDynamicTextEditor = ({
   });
 
   // Initialize Markdown shortcuts with our modification tracking flag
-  const { processMarkdown } = useMarkdownShortcuts(quillInstance, isModifyingText);
+  // const { processMarkdown } = useMarkdownShortcuts(quillInstance, isModifyingText);
 
   // Apply custom styles to Quill
   useEffect(() => {
@@ -270,7 +270,7 @@ export const useDynamicTextEditor = ({
     blur: useCallback(() => quillInstance?.blur(), [quillInstance]),
     suggestionState,
     insertSuggestion,
-    processMarkdown,
+    // processMarkdown,
   };
 };
 

@@ -39,14 +39,7 @@ turndownService.addRule("paragraph", {
 
 // Add rule to prevent escaping special characters
 turndownService.escape = function (string) {
-  // Don't escape any characters within template variables
-  if (string.startsWith("{{") && string.endsWith("}}")) {
-    return string;
-  }
-
-  // For normal text, only escape the minimal set of characters needed for Markdown
-  return string.replace(/\\/g, "\\\\").replace(/\*/g, "\\*");
-  // Removed all other escaping to keep special characters intact
+  return string;
 };
 
 const showdownConverter = new Showdown.Converter({
@@ -55,11 +48,52 @@ const showdownConverter = new Showdown.Converter({
   literalMidWordUnderscores: true,
   literalMidWordAsterisks: true,
   parseImgDimensions: true,
+  noHeaderId: true,
+  disableForced4SpacesIndentedSublists: true,
+  simplifiedAutoLink: false,
+  excludeTrailingPunctuationFromURLs: false,
+  openLinksInNewWindow: false,
+  backslashEscapesHTMLTags: false,
+  emoji: false,
+  underline: false,
+  completeHTMLDocument: false,
+  metadata: false,
+  splitAdjacentBlockquotes: false,
 });
 
-// Fix for proper line break conversion
-showdownConverter.setOption("simpleLineBreaks", true);
+// Disable all Markdown conversion
+showdownConverter.setOption("literalMidWordAsterisks", true);
+showdownConverter.setOption("literalMidWordUnderscores", true);
+showdownConverter.setOption("noHeaderId", true);
+showdownConverter.setOption("parseImgDimensions", false);
+showdownConverter.setOption("strikethrough", false);
+showdownConverter.setOption("tables", false);
+showdownConverter.setOption("tasklists", false);
+showdownConverter.setOption("smoothLivePreview", false);
+showdownConverter.setOption("smartIndentationFix", false);
 showdownConverter.setOption("disableForced4SpacesIndentedSublists", true);
+showdownConverter.setOption("simpleLineBreaks", true);
+showdownConverter.setOption("requireSpaceBeforeHeadingText", true);
+showdownConverter.setOption("ghMentions", false);
+showdownConverter.setOption("encodeEmails", false);
+
+// Add extensions to disable Markdown features
+showdownConverter.addExtension(
+  {
+    type: "output",
+    filter: function (text) {
+      // We need to encode HTML entities that may have been created
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    },
+  },
+  "encodeHTMLEntities"
+);
+
+// Override the makeHtml method to prevent Markdown conversion completely
+showdownConverter.makeHtml = function (text) {
+  // Skip Markdown parsing and just wrap in paragraph tags if needed
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+};
 
 const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, DynamicTextEditorProps> = (
   { className = "", classNames, suggestions, renderItem, value, onChange, minSuggestionWidth, maxSuggestionWidth, maxSuggestionHeight, showCustomToolbar = false, suggestionTrigger = "{{", suggestionClosing = "}}", ...props },
@@ -373,6 +407,8 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
       isSelfUpdateRef.current = true;
 
       const initialHtml = formatMarkdown(value);
+
+      console.log("initialHtml", initialHtml, value);
 
       quillInstance.root.innerHTML = initialHtml;
 

@@ -89,7 +89,8 @@ const useQuill = ({ container, theme = "snow", placeholder = "Write something...
 
     // Include necessary formats based on toolbar
     //@ts-ignore
-    const formatsToUse = toolbar === true ? [...new Set([...defaultFormats, ...formats])] : [...formats, "template-variable"];
+    const formatsToUse = ["template-variable"];
+    // const formatsToUse = toolbar === true ? [...new Set([...defaultFormats, ...formats])] : [...formats, "template-variable"];
 
     try {
       const quillInstance = new Quill(editorElement as HTMLElement, {
