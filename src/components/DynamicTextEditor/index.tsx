@@ -70,52 +70,77 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   const isSelfUpdateRef = useRef<boolean>(false);
   const selectionRef = useRef<{ index: number; length: number } | null>(null);
 
+  // Format markdown to HTML with proper paragraph and line break handling
+  const formatMarkdown = useCallback((markdownValue: string): string => {
+    if (!markdownValue) return "";
+
+    // Split by newlines and process each part
+    const parts = markdownValue.split(/\n/);
+    let processedHtml = "";
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+
+      // If this part is empty and not the last part, it's a line break
+      if (part.trim() === "" && i < parts.length - 1) {
+        processedHtml += "<p><br></p>";
+      } else if (part.trim() !== "") {
+        // For non-empty parts, convert to HTML and wrap in paragraph tags
+        const partHtml = showdownConverter.makeHtml(part);
+        // Remove any existing paragraph tags from the converted HTML
+        const cleanPartHtml = partHtml.replace(/<\/?p>/g, "");
+        processedHtml += `<p>${cleanPartHtml}</p>`;
+      }
+    }
+
+    return processedHtml;
+  }, []);
+
   // Convert markdown to HTML only when the value changes
   const htmlValue = useMemo(() => {
-    return "";
     // Handle empty/falsy values explicitly
-    // if (value === "" || value === null || value === undefined) {
-    //   lastMarkdownValueRef.current = "";
-    //   lastHtmlValueRef.current = "";
-    //   return "";
-    // }
+    if (value === "" || value === null || value === undefined) {
+      lastMarkdownValueRef.current = "";
+      lastHtmlValueRef.current = "";
+      return "";
+    }
 
-    // if (value === lastMarkdownValueRef.current) {
-    //   return lastHtmlValueRef.current;
-    // }
+    if (value === lastMarkdownValueRef.current) {
+      return lastHtmlValueRef.current;
+    }
 
-    // lastMarkdownValueRef.current = value;
+    lastMarkdownValueRef.current = value;
 
-    // // Special pre-processing for consecutive newlines
-    // // First, preserve template variables
-    // const templatePattern = /{{[^}]+}}/g;
-    // const templates: string[] = [];
-    // const tempValue = value.replace(templatePattern, (match) => {
-    //   templates.push(match);
-    //   return `__TEMPLATE_${templates.length - 1}__`;
-    // });
+    // Special pre-processing for consecutive newlines
+    // First, preserve template variables
+    const templatePattern = /{{[^}]+}}/g;
+    const templates: string[] = [];
+    const tempValue = value.replace(templatePattern, (match: string) => {
+      templates.push(match);
+      return `__TEMPLATE_${templates.length - 1}__`;
+    });
 
-    // // Process consecutive newlines
-    // let processedValue = tempValue.replace(/\n{2,}/g, (match) => {
-    //   // For each newline, add a paragraph break
-    //   return match
-    //     .split("")
-    //     .map(() => "<br>")
-    //     .join("");
-    // });
+    // Process consecutive newlines
+    let processedValue = tempValue.replace(/\n{2,}/g, (match: string) => {
+      // For each newline, add a paragraph break
+      return match
+        .split("")
+        .map(() => "<br>")
+        .join("");
+    });
 
-    // // Restore template variables
-    // processedValue = processedValue.replace(/__TEMPLATE_(\d+)__/g, (_, index) => {
-    //   return templates[parseInt(index)];
-    // });
+    // Restore template variables
+    processedValue = processedValue.replace(/__TEMPLATE_(\d+)__/g, (_: string, index: string) => {
+      return templates[parseInt(index)];
+    });
 
-    // let newHtml = showdownConverter.makeHtml(processedValue || "");
+    let newHtml = showdownConverter.makeHtml(processedValue || "");
 
-    // // Replace multiple <br> tags with proper paragraph spacing
-    // newHtml = newHtml.replace(/<br>/g, "p><br><p>");
+    // Replace multiple <br> tags with proper paragraph spacing
+    newHtml = newHtml.replace(/<br>/g, "p><br><p>");
 
-    // lastHtmlValueRef.current = newHtml;
-    // return newHtml;
+    lastHtmlValueRef.current = newHtml;
+    return newHtml;
   }, [value]);
 
   // Custom onChange handler without debouncing
@@ -146,7 +171,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   );
 
   const { quillRef, quillInstance, editorState, setEditorState, clearContent, focus, blur } = useDynamicTextEditor({
-    value: "",
+    value: htmlValue,
     onChange: handleChange,
     suggestions,
     toolbar: false,
@@ -169,8 +194,6 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
 
   // Update editor content when value changes
   useEffect(() => {
-    return;
-
     if (!quillInstance || isSelfUpdateRef.current) return;
 
     // Handle empty values explicitly
@@ -244,52 +267,36 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   const setValue = useCallback(
     (newValue: string) => {
       // Handle empty value case
-      // if (newValue === "" || newValue === null || newValue === undefined) {
-      //   lastHtmlValueRef.current = "";
-      //   lastMarkdownValueRef.current = "";
-      //   if (quillInstance) {
-      //     isSelfUpdateRef.current = true;
-      //     quillInstance.setText("");
-      //     isSelfUpdateRef.current = false;
-      //   }
-      //   if (onChange) {
-      //     onChange("");
-      //   }
-      //   return;
-      // }
-      // // Special pre-processing for consecutive newlines
-      // // First, preserve template variables
-      // const templatePattern = /{{[^}]+}}/g;
-      // const templates: string[] = [];
-      // const tempValue = newValue.replace(templatePattern, (match) => {
-      //   templates.push(match);
-      //   return `__TEMPLATE_${templates.length - 1}__`;
-      // });
-      // // Process consecutive newlines
-      // let processedValue = tempValue.replace(/\n{2,}/g, (match) => {
-      //   // For each newline, add a paragraph break
-      //   return match
-      //     .split("")
-      //     .map(() => "<br>")
-      //     .join("");
-      // });
-      // // Restore template variables
-      // processedValue = processedValue.replace(/__TEMPLATE_(\d+)__/g, (_, index) => {
-      //   return templates[parseInt(index)];
-      // });
-      // const newHtml = showdownConverter.makeHtml(processedValue);
-      // lastHtmlValueRef.current = newHtml;
-      // lastMarkdownValueRef.current = newValue;
-      // if (quillInstance) {
-      //   isSelfUpdateRef.current = true;
-      //   quillInstance.root.innerHTML = newHtml;
-      //   isSelfUpdateRef.current = false;
-      // }
-      // if (onChange) {
-      //   onChange(newValue);
-      // }
+      if (newValue === "" || newValue === null || newValue === undefined) {
+        lastHtmlValueRef.current = "";
+        lastMarkdownValueRef.current = "";
+        if (quillInstance) {
+          isSelfUpdateRef.current = true;
+          quillInstance.setText("");
+          isSelfUpdateRef.current = false;
+        }
+        if (onChange) {
+          onChange("");
+        }
+        return;
+      }
+
+      const initialHtml = formatMarkdown(newValue);
+
+      lastHtmlValueRef.current = initialHtml;
+      lastMarkdownValueRef.current = newValue;
+
+      if (quillInstance) {
+        isSelfUpdateRef.current = true;
+        quillInstance.root.innerHTML = initialHtml;
+        isSelfUpdateRef.current = false;
+      }
+
+      if (onChange) {
+        onChange(newValue);
+      }
     },
-    [quillInstance, onChange]
+    [quillInstance, onChange, formatMarkdown]
   );
 
   // Format handlers for custom toolbar
@@ -365,40 +372,8 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
     if (lastHtmlValueRef.current === "") {
       isSelfUpdateRef.current = true;
 
-      // Process the value to handle multiple line breaks correctly
-      // First, preserve template variables
-      // const templatePattern = /{{[^}]+}}/g;
-      // const templates: string[] = [];
-      // const tempValue = value.replace(templatePattern, (match) => {
-      //   templates.push(match);
-      //   return `__TEMPLATE_${templates.length - 1}__`;
-      // });
+      const initialHtml = formatMarkdown(value);
 
-      // Split by newlines and process each part
-      const parts = value.split(/\n/);
-      let processedHtml = "";
-
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
-
-        // If this part is empty and not the last part, it's a line break
-        if (part.trim() === "" && i < parts.length - 1) {
-          processedHtml += "<p><br></p>";
-        } else if (part.trim() !== "") {
-          // For non-empty parts, convert to HTML and wrap in paragraph tags
-          const partHtml = showdownConverter.makeHtml(part);
-          // Remove any existing paragraph tags from the converted HTML
-          const cleanPartHtml = partHtml.replace(/<\/?p>/g, "");
-          processedHtml += `<p>${cleanPartHtml}</p>`;
-        }
-      }
-
-      // Restore template variables
-      const initialHtml = processedHtml.replace(/__TEMPLATE_(\d+)__/g, (_, index) => {
-        return templates[parseInt(index)];
-      });
-
-      console.log("CURRENT", JSON.stringify(initialHtml), JSON.stringify(value));
       quillInstance.root.innerHTML = initialHtml;
 
       // Update refs
@@ -407,7 +382,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
 
       isSelfUpdateRef.current = false;
     }
-  }, [quillInstance, value]); // This will run once when quillInstance is available
+  }, [quillInstance, value, formatMarkdown]); // Added formatMarkdown to dependencies
 
   return (
     <EditorContainer className={`dynamic-text-editor ${className}`}>
