@@ -79,7 +79,6 @@ export const useDynamicTextEditor = ({
   const handleTextChange = useCallback(
     (html: string) => {
       // Skip if we're programmatically modifying
-      console.log("html", html);
       if (isModifyingText.current) return;
 
       // Update our local state immediately
