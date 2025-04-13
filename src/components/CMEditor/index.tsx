@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { styled } from "styled-components";
 import { EditorState, StateField, Transaction } from "@codemirror/state";
 import { EditorView, Decoration, DecorationSet, keymap } from "@codemirror/view";
@@ -68,6 +69,34 @@ const variableField = StateField.define<DecorationSet>({
   },
 });
 
+// React component for suggestion item
+const SuggestionItem = ({ label, detail, link }: { label: string; detail?: string; link?: string }) => {
+  return (
+    <div className="cm-suggestion-item">
+      <div className="cm-suggestion-label">{label}</div>
+      {detail && <div className="cm-suggestion-description">{detail}</div>}
+      {link && <div className="cm-suggestion-link">{link}</div>}
+    </div>
+  );
+};
+
+// React component for suggestion tooltip (hover)
+const SuggestionInfo = ({ label, detail, link }: { label: string; detail?: string; link?: string }) => {
+  return (
+    <div className="cm-suggestion-info">
+      <strong>{label}</strong>
+      {detail && <div>{detail}</div>}
+      {link && (
+        <div>
+          <a href={link} target="_blank" rel="noopener noreferrer">
+            {link}
+          </a>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Create a completion source for variables
 function variableCompletionSource(context: CompletionContext, suggestions: Array<{ value: string; label?: string; description?: string; link?: string }>) {
   // Match any text after {{
@@ -83,49 +112,31 @@ function variableCompletionSource(context: CompletionContext, suggestions: Array
       apply: `${s.value}}}`,
       boost: 1,
       info: () => {
-        // This will be used if user hovers on suggestion
+        // Create DOM element for tooltip
         const infoEl = document.createElement("div");
-        infoEl.className = "cm-suggestion-info";
 
-        if (s.link) {
-          infoEl.innerHTML = `<strong>${s.value}</strong><br>${s.description || ""}<br><a href="${s.link}" target="_blank">${s.link}</a>`;
-        } else {
-          infoEl.innerHTML = `<strong>${s.value}</strong><br>${s.description || ""}`;
-        }
+        // Render React component to the DOM element
+        const root = createRoot(infoEl);
+        root.render(<SuggestionInfo label={s.value} detail={s.description} link={s.link} />);
 
         return infoEl;
       },
+      // Store source object for use in the renderer
+      source: s,
     })),
   };
 }
 
-// Custom renderer for suggestion items
+// Render function for suggestion items using React
 function renderSuggestionItem(completion: { label: string; detail?: string; source?: { link?: string } }) {
-  const suggestionItem = document.createElement("div");
-  suggestionItem.className = "cm-suggestion-item";
+  // Create DOM container
+  const container = document.createElement("div");
 
-  const label = document.createElement("div");
-  label.className = "cm-suggestion-label";
-  label.textContent = completion.label || "";
-  suggestionItem.appendChild(label);
+  // Create React root and render component
+  const root = createRoot(container);
+  root.render(<SuggestionItem label={completion.label} detail={completion.detail} link={completion.source?.link} />);
 
-  if (completion.detail) {
-    const description = document.createElement("div");
-    description.className = "cm-suggestion-description";
-    description.textContent = completion.detail;
-    suggestionItem.appendChild(description);
-  }
-
-  // Check if this suggestion has a link (we store link in the source suggestion object)
-  const sourceObj = completion.source;
-  if (sourceObj && sourceObj.link) {
-    const link = document.createElement("div");
-    link.className = "cm-suggestion-link";
-    link.textContent = sourceObj.link;
-    suggestionItem.appendChild(link);
-  }
-
-  return suggestionItem;
+  return container;
 }
 
 export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorProps) => {
@@ -390,6 +401,12 @@ const EditorContainer = styled.div`
       a {
         color: #1890ff;
         text-decoration: underline;
+      }
+
+      strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #1890ff;
       }
     }
 
