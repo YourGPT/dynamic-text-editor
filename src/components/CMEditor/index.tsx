@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { styled } from "styled-components";
 import { EditorState, StateField, Transaction } from "@codemirror/state";
-import { EditorView, Decoration, DecorationSet, keymap } from "@codemirror/view";
+import { EditorView, Decoration, DecorationSet, keymap, WidgetType } from "@codemirror/view";
 import { autocompletion, CompletionContext, startCompletion, completionKeymap } from "@codemirror/autocomplete";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
@@ -12,6 +12,7 @@ interface CMEditorProps {
   value: string;
   onChange: (value: string) => void;
   suggestions: Array<{ value: string; label?: string; description?: string; link?: string }>;
+  placeholder?: string;
   className?: string;
 }
 
@@ -77,6 +78,13 @@ const SuggestionItem = ({ label, detail, link, value }: { label: string; detail?
         <div className="cm-suggestion-label">{label}</div>
         {detail && <div className="cm-suggestion-description">{detail}</div>}
       </div>
+      {/* <div className="cm-suggestion-right">
+        {link && (
+          <a href={link} target="_blank" rel="noopener noreferrer">
+            {link}
+          </a>
+        )}
+      </div> */}
     </div>
   );
 };
@@ -255,7 +263,33 @@ function checkForVariableStart(view: EditorView) {
   return false;
 }
 
-export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorProps) => {
+// Create a placeholder extension
+function placeholderExtension(placeholder: string) {
+  return EditorView.decorations.of((view) => {
+    // Only show placeholder when editor is empty
+    if (view.state.doc.length > 0) return Decoration.none;
+
+    // Create a placeholder decoration at position 0
+    return Decoration.set([
+      Decoration.widget({
+        widget: new (class extends WidgetType {
+          toDOM() {
+            const span = document.createElement("span");
+            span.className = "cm-placeholder";
+            span.textContent = placeholder;
+            return span;
+          }
+          ignoreEvent() {
+            return true;
+          }
+        })(),
+        side: 1,
+      }).range(0),
+    ]);
+  });
+}
+
+export const CMEditor = ({ value, onChange, suggestions, placeholder, className }: CMEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const initializedRef = useRef(false);
@@ -275,6 +309,9 @@ export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorPr
         // Basic editor setup
         EditorView.lineWrapping,
         syntaxHighlighting(highlightStyle),
+
+        // Placeholder (if provided)
+        placeholder ? placeholderExtension(placeholder) : [],
 
         // History extension for undo/redo functionality
         history(),
@@ -389,6 +426,9 @@ export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorPr
         EditorView.lineWrapping,
         syntaxHighlighting(highlightStyle),
 
+        // Placeholder (if provided)
+        placeholder ? placeholderExtension(placeholder) : [],
+
         // History extension for undo/redo functionality
         history(),
 
@@ -499,20 +539,32 @@ export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorPr
 };
 
 const EditorContainer = styled.div`
+  .cm-focused {
+    border: none;
+    outline: none;
+  }
+  .cm-scroller {
+    font-family: inherit;
+  }
   .cm-editor {
-    height: 100%;
-    min-height: 200px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    overflow: hidden;
   }
 
   .cm-variable-highlight {
-    background-color: hsl(var(--primary) / 0.2);
+    background-color: hsl(var(--primary) / 0.1);
     border-radius: 2px;
     color: hsl(var(--primary));
     padding: 0 2px;
-    font-weight: 500;
+    /* font-weight: 500; */
+  }
+
+  .cm-placeholder {
+    color: hsl(var(--foreground) / 0.5);
+    pointer-events: none;
+    position: absolute;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .cm-tooltip {
@@ -524,13 +576,19 @@ const EditorContainer = styled.div`
     overflow-y: auto;
     z-index: 1000;
   }
+  .cm-tooltip.cm-tooltip-autocomplete > ul {
+    font-family: inherit;
+    white-space: pre-wrap;
+  }
 
   .cm-tooltip-autocomplete {
     & > ul {
       font-family: inherit;
-      max-height: 300px;
+      max-height: 380px;
+      width: 320px;
       overflow-y: auto;
       padding: 4px 0;
+      white-space: pre-wrap;
     }
 
     .cm-completionLabel {
@@ -553,15 +611,17 @@ const EditorContainer = styled.div`
     }
 
     .cm-suggestion-label {
-      color: hsl(var(--foreground) / 0.8);
-      font-size: 12px;
+      color: hsl(var(--foreground) / 0.9);
+      font-size: 14px;
       margin-bottom: 2px;
+      font-weight: normal;
     }
 
     .cm-suggestion-description {
-      font-size: 10px;
+      font-size: 12px;
       color: hsl(var(--foreground) / 0.6);
       margin-bottom: 2px;
+      white-space: pre-wrap;
     }
 
     .cm-suggestion-link {

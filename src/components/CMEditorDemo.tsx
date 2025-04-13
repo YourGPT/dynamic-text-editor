@@ -1,19 +1,7 @@
 import { useState } from "react";
 import { styled } from "styled-components";
 import { CMEditor } from "./CMEditor";
-
-const demoSuggestions = [
-  { value: "username", label: "Username", description: "User's full name", link: "https://example.com/user-docs" },
-  { value: "email", label: "Email", description: "User's email address" },
-  { value: "product", label: "Product", description: "Product name", link: "https://example.com/products" },
-  { value: "price", label: "Price", description: "Product price" },
-  { value: "date", label: "Date", description: "Current date", link: "https://example.com/date-format" },
-  { value: "company", label: "Company", description: "Company name" },
-  { value: "phone", label: "Phone", description: "Customer phone number" },
-  { value: "address", label: "Address", description: "Shipping address", link: "https://example.com/address-format" },
-  { value: "orderId", label: "Order ID", description: "Unique order identifier" },
-  { value: "creditCard", label: "Credit Card", description: "Credit card type" },
-];
+import { defaultSuggestions } from "../utils/constants";
 
 export const CMEditorDemo = () => {
   const [value, setValue] = useState("Hello {{username}},\n\nThank you for purchasing {{product}} for {{price}}.\nWe hope you enjoy your purchase!\n\nReaching us at {{email}} with any questions.\n\nRegards,\n{{company}}");
@@ -31,31 +19,13 @@ export const CMEditorDemo = () => {
       </InstructionsPanel>
 
       <EditorWrapper>
-        <CMEditor value={value} onChange={handleChange} suggestions={demoSuggestions} />
+        <CMEditor className="cmeditor" value={value} onChange={handleChange} suggestions={defaultSuggestions} placeholder="Enter your message here..." />
       </EditorWrapper>
 
       <OutputSection>
         <h3>Current Value:</h3>
         <pre>{value}</pre>
       </OutputSection>
-
-      <VariablesSection>
-        <h3>Available Variables:</h3>
-        <ul>
-          {demoSuggestions.map((suggestion) => (
-            <li key={suggestion.value}>
-              <strong>{`{{${suggestion.value}}}`}</strong>: {suggestion.description}
-              {suggestion.link && (
-                <span className="variable-link">
-                  <a href={suggestion.link} target="_blank" rel="noopener noreferrer">
-                    {suggestion.link}
-                  </a>
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </VariablesSection>
     </Container>
   );
 };

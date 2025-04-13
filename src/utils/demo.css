@@ -125,3 +125,9 @@ body {
   font-size: 15px;
   /* } */
 }
+
+.cmeditor {
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  padding: 10px;
+}
