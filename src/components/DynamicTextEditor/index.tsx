@@ -178,31 +178,33 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   }, [initialValue]);
 
   // Custom onChange handler without debouncing
-  const handleChange = useCallback(
-    (html: string) => {
-      if (isSelfUpdateRef.current) return;
+  const handleChange = useCallback((html: string) => {
+    if (isSelfUpdateRef.current) return;
 
-      // Special handling for empty content
-      if (!html) {
-        lastHtmlValueRef.current = "";
-        lastMarkdownValueRef.current = "";
-
-        if (onChange) {
-          onChange("");
-        }
-        return;
-      }
-
-      const markdownContent = turndownService.turndown(html);
-      lastHtmlValueRef.current = html;
-      lastMarkdownValueRef.current = markdownContent;
+    // Special handling for empty content
+    if (!html) {
+      lastHtmlValueRef.current = "";
+      lastMarkdownValueRef.current = "";
 
       if (onChange) {
-        onChange(markdownContent);
+        onChange("");
       }
-    },
-    [onChange]
-  );
+      return;
+    }
+
+    const markdownContent = turndownService.turndown(html);
+    lastHtmlValueRef.current = html;
+    lastMarkdownValueRef.current = markdownContent;
+
+    console.log("MK", markdownContent.normalize());
+    console.log("MK", initialValue?.normalize());
+
+    console.log("MK Compare", initialValue?.normalize() === markdownContent.normalize());
+
+    if (onChange && markdownContent !== initialValue) {
+      onChange(markdownContent);
+    }
+  }, []);
 
   const { quillRef, quillInstance, editorState, setEditorState, clearContent, focus, blur } = useDynamicTextEditor({
     value: htmlValue,
@@ -278,9 +280,6 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
           quillInstance.setText("");
           isSelfUpdateRef.current = false;
         }
-        if (onChange) {
-          onChange("");
-        }
         return;
       }
 
@@ -295,12 +294,8 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
         quillInstance.clipboard.dangerouslyPasteHTML(initialHtml, "api");
         isSelfUpdateRef.current = false;
       }
-
-      if (onChange) {
-        onChange(newValue);
-      }
     },
-    [quillInstance, onChange, formatMarkdown]
+    [quillInstance, formatMarkdown]
   );
 
   // Expose methods via ref
