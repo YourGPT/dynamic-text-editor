@@ -6,7 +6,7 @@ import { EditorView, Decoration, DecorationSet, keymap } from "@codemirror/view"
 import { autocompletion, CompletionContext, startCompletion, completionKeymap } from "@codemirror/autocomplete";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
-import { defaultKeymap } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 
 interface CMEditorProps {
   value: string;
@@ -70,32 +70,33 @@ const variableField = StateField.define<DecorationSet>({
 });
 
 // React component for suggestion item
-const SuggestionItem = ({ label, detail, link }: { label: string; detail?: string; link?: string }) => {
+const SuggestionItem = ({ label, detail, link, value }: { label: string; detail?: string; link?: string; value?: string }) => {
   return (
     <div className="cm-suggestion-item">
-      <div className="cm-suggestion-label">{label}</div>
-      {detail && <div className="cm-suggestion-description">{detail}</div>}
-      {link && <div className="cm-suggestion-link">{link}</div>}
+      <div className="cm-suggestion-left">
+        <div className="cm-suggestion-label">{label}</div>
+        {detail && <div className="cm-suggestion-description">{detail}</div>}
+      </div>
     </div>
   );
 };
 
 // React component for suggestion tooltip (hover)
-const SuggestionInfo = ({ label, detail, link }: { label: string; detail?: string; link?: string }) => {
-  return (
-    <div className="cm-suggestion-info">
-      <strong>{label}</strong>
-      {detail && <div>{detail}</div>}
-      {link && (
-        <div>
-          <a href={link} target="_blank" rel="noopener noreferrer">
-            {link}
-          </a>
-        </div>
-      )}
-    </div>
-  );
-};
+// const SuggestionInfo = ({ label, detail, link }: { label: string; detail?: string; link?: string }) => {
+//   return (
+//     <div className="cm-suggestion-info">
+//       <div className="cm-suggestion-info-label">{label}</div>
+//       {detail && <div>{detail}</div>}
+//       {link && (
+//         <div>
+//           <a href={link} target="_blank" rel="noopener noreferrer">
+//             {link}
+//           </a>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
 
 // Create a completion source for variables
 function variableCompletionSource(context: CompletionContext, suggestions: Array<{ value: string; label?: string; description?: string; link?: string }>) {
@@ -136,20 +137,20 @@ function variableCompletionSource(context: CompletionContext, suggestions: Array
       from,
       to,
       options: suggestions.map((s) => ({
-        label: s.value,
+        label: s.label || s.value,
         detail: s.description || "",
         apply: s.value, // Just replace what's between {{ and }}
         boost: 1,
-        info: () => {
-          // Create DOM element for tooltip
-          const infoEl = document.createElement("div");
+        // info: () => {
+        //   // Create DOM element for tooltip
+        //   const infoEl = document.createElement("div");
 
-          // Render React component to the DOM element
-          const root = createRoot(infoEl);
-          root.render(<SuggestionInfo label={s.value} detail={s.description} link={s.link} />);
+        //   // Render React component to the DOM element
+        //   const root = createRoot(infoEl);
+        //   root.render(<SuggestionInfo label={s.value} detail={s.description} link={s.link} />);
 
-          return infoEl;
-        },
+        //   return infoEl;
+        // },
         // Store source object for use in the renderer
         source: s,
       })),
@@ -168,16 +169,16 @@ function variableCompletionSource(context: CompletionContext, suggestions: Array
       detail: s.description || "",
       apply: `${s.value}}}`,
       boost: 1,
-      info: () => {
-        // Create DOM element for tooltip
-        const infoEl = document.createElement("div");
+      //   info: () => {
+      //     // Create DOM element for tooltip
+      //     const infoEl = document.createElement("div");
 
-        // Render React component to the DOM element
-        const root = createRoot(infoEl);
-        root.render(<SuggestionInfo label={s.value} detail={s.description} link={s.link} />);
+      //     // Render React component to the DOM element
+      //     const root = createRoot(infoEl);
+      //     root.render(<SuggestionInfo label={s.value} detail={s.description} link={s.link} />);
 
-        return infoEl;
-      },
+      //     return infoEl;
+      //   },
       // Store source object for use in the renderer
       source: s,
     })),
@@ -185,13 +186,13 @@ function variableCompletionSource(context: CompletionContext, suggestions: Array
 }
 
 // Render function for suggestion items using React
-function renderSuggestionItem(completion: { label: string; detail?: string; source?: { link?: string } }) {
+function renderSuggestionItem(completion: { label: string; detail?: string; source?: { link?: string; value?: string } }) {
   // Create DOM container
   const container = document.createElement("div");
 
   // Create React root and render component
   const root = createRoot(container);
-  root.render(<SuggestionItem label={completion.label} detail={completion.detail} link={completion.source?.link} />);
+  root.render(<SuggestionItem label={completion.label} detail={completion.detail} link={completion.source?.link} value={completion.source?.value} />);
 
   return container;
 }
@@ -275,8 +276,11 @@ export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorPr
         EditorView.lineWrapping,
         syntaxHighlighting(highlightStyle),
 
-        // Include default keymap for basic editing operations (including Enter for newlines)
-        keymap.of(defaultKeymap),
+        // History extension for undo/redo functionality
+        history(),
+
+        // Include keymaps for basic editing, history, and indentation
+        keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
 
         // Include keymap for completions
         keymap.of(completionKeymap),
@@ -385,8 +389,11 @@ export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorPr
         EditorView.lineWrapping,
         syntaxHighlighting(highlightStyle),
 
-        // Include default keymap for basic editing operations
-        keymap.of(defaultKeymap),
+        // History extension for undo/redo functionality
+        history(),
+
+        // Include keymaps for basic editing, history, and indentation
+        keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
 
         // Include keymap for completions
         keymap.of(completionKeymap),
@@ -501,16 +508,16 @@ const EditorContainer = styled.div`
   }
 
   .cm-variable-highlight {
-    background-color: rgba(64, 169, 255, 0.2);
+    background-color: hsl(var(--primary) / 0.2);
     border-radius: 2px;
-    color: #1890ff;
+    color: hsl(var(--primary));
     padding: 0 2px;
     font-weight: 500;
   }
 
   .cm-tooltip {
-    background-color: white;
-    border: 1px solid #ddd;
+    background-color: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
     border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     max-height: 300px;
@@ -529,6 +536,11 @@ const EditorContainer = styled.div`
     .cm-completionLabel {
       padding: 0 8px;
       font-weight: 500;
+      display: none; /* Hide default label */
+    }
+
+    .cm-completionDetail {
+      display: none; /* Hide default detail */
     }
 
     .cm-suggestion-item {
@@ -541,14 +553,14 @@ const EditorContainer = styled.div`
     }
 
     .cm-suggestion-label {
-      font-weight: 600;
-      color: #1890ff;
+      color: hsl(var(--foreground) / 0.8);
+      font-size: 12px;
       margin-bottom: 2px;
     }
 
     .cm-suggestion-description {
-      font-size: 12px;
-      color: #666;
+      font-size: 10px;
+      color: hsl(var(--foreground) / 0.6);
       margin-bottom: 2px;
     }
 
@@ -581,8 +593,15 @@ const EditorContainer = styled.div`
         background-color: #f5f5f5;
       }
       &[aria-selected] {
-        background-color: #e6f7ff;
+        background-color: #ffe6e6;
       }
     }
+  }
+
+  .cm-tooltip-autocomplete li:hover {
+    background-color: #f5f5f5;
+  }
+  && .cm-tooltip-autocomplete ul li[aria-selected] {
+    background-color: hsl(var(--primary) / 0.1);
   }
 `;

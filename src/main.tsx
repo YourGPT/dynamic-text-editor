@@ -33,17 +33,6 @@ const Demo = () => {
         <CMEditorDemo />
       </div>
 
-      <div style={{ marginBottom: "40px" }}>
-        <h2>Simple Direct Usage</h2>
-        <div style={{ border: "1px solid #ddd", padding: "10px", marginBottom: "10px", height: "200px" }}>
-          <CMEditor value={cmValue} onChange={setCmValue} suggestions={defaultSuggestions} />
-        </div>
-        <div>
-          <h4>Current Value:</h4>
-          <pre>{cmValue}</pre>
-        </div>
-      </div>
-
       <h2>Original DynamicTextEditor</h2>
       <button onClick={() => editorRef.current?.setValue(DEFAULT_VAL)}>Add Value</button>
 

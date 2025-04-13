@@ -3,16 +3,16 @@ import { styled } from "styled-components";
 import { CMEditor } from "./CMEditor";
 
 const demoSuggestions = [
-  { value: "username", description: "User's full name", link: "https://example.com/user-docs" },
-  { value: "email", description: "User's email address" },
-  { value: "product", description: "Product name", link: "https://example.com/products" },
-  { value: "price", description: "Product price" },
-  { value: "date", description: "Current date", link: "https://example.com/date-format" },
-  { value: "company", description: "Company name" },
-  { value: "phone", description: "Customer phone number" },
-  { value: "address", description: "Shipping address", link: "https://example.com/address-format" },
-  { value: "orderId", description: "Unique order identifier" },
-  { value: "creditCard", description: "Credit card type" },
+  { value: "username", label: "Username", description: "User's full name", link: "https://example.com/user-docs" },
+  { value: "email", label: "Email", description: "User's email address" },
+  { value: "product", label: "Product", description: "Product name", link: "https://example.com/products" },
+  { value: "price", label: "Price", description: "Product price" },
+  { value: "date", label: "Date", description: "Current date", link: "https://example.com/date-format" },
+  { value: "company", label: "Company", description: "Company name" },
+  { value: "phone", label: "Phone", description: "Customer phone number" },
+  { value: "address", label: "Address", description: "Shipping address", link: "https://example.com/address-format" },
+  { value: "orderId", label: "Order ID", description: "Unique order identifier" },
+  { value: "creditCard", label: "Credit Card", description: "Credit card type" },
 ];
 
 export const CMEditorDemo = () => {
