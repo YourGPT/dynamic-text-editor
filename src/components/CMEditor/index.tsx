@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, createElement } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { styled } from "styled-components";
 import { EditorState, StateField, Transaction } from "@codemirror/state";
@@ -99,11 +99,68 @@ const SuggestionInfo = ({ label, detail, link }: { label: string; detail?: strin
 
 // Create a completion source for variables
 function variableCompletionSource(context: CompletionContext, suggestions: Array<{ value: string; label?: string; description?: string; link?: string }>) {
-  // Match any text after {{
+  // First try to match a cursor position inside an existing {{}} pattern
+  const line = context.state.doc.lineAt(context.pos);
+  const lineText = line.text;
+  const cursorPosInLine = context.pos - line.from;
+
+  // Look for {{ before the cursor and }} after the cursor on the current line
+  let varStartIndex = -1;
+  let varEndIndex = -1;
+
+  // Find the closest {{ before the cursor
+  for (let i = cursorPosInLine - 1; i >= 0; i--) {
+    if (lineText.substring(i, i + 2) === "{{") {
+      varStartIndex = i;
+      break;
+    }
+  }
+
+  // Find the closest }} after the cursor
+  if (varStartIndex >= 0) {
+    for (let i = cursorPosInLine; i < lineText.length - 1; i++) {
+      if (lineText.substring(i, i + 2) === "}}") {
+        varEndIndex = i;
+        break;
+      }
+    }
+  }
+
+  // If we found {{ before and }} after, we're inside a variable
+  if (varStartIndex >= 0 && varEndIndex >= 0) {
+    // We're inside a {{}} pattern, show suggestions and replace only the content
+    const from = line.from + varStartIndex + 2; // Position after {{
+    const to = line.from + varEndIndex; // Position before }}
+
+    return {
+      from,
+      to,
+      options: suggestions.map((s) => ({
+        label: s.value,
+        detail: s.description || "",
+        apply: s.value, // Just replace what's between {{ and }}
+        boost: 1,
+        info: () => {
+          // Create DOM element for tooltip
+          const infoEl = document.createElement("div");
+
+          // Render React component to the DOM element
+          const root = createRoot(infoEl);
+          root.render(<SuggestionInfo label={s.value} detail={s.description} link={s.link} />);
+
+          return infoEl;
+        },
+        // Store source object for use in the renderer
+        source: s,
+      })),
+    };
+  }
+
+  // Fall back to the original pattern-matching logic
   const word = context.matchBefore(/\{\{([^}]*)$/);
   if (!word) return null;
 
-  // Show suggestions even if just {{ is typed
+  // Show suggestions for any text after {{ (including empty)
   return {
     from: word.from + 2, // Position after '{{'
     options: suggestions.map((s) => ({
@@ -137,6 +194,64 @@ function renderSuggestionItem(completion: { label: string; detail?: string; sour
   root.render(<SuggestionItem label={completion.label} detail={completion.detail} link={completion.source?.link} />);
 
   return container;
+}
+
+// Check the current document position for {{ pattern and show suggestions if found
+function checkForVariableStart(view: EditorView) {
+  const pos = view.state.selection.main.from;
+  const line = view.state.doc.lineAt(pos);
+  const lineStart = line.from;
+  const lineText = line.text;
+  const cursorPosInLine = pos - lineStart;
+
+  // Case 1: Check if we're inside {{}}
+  let varStartIndex = -1;
+  let varEndIndex = -1;
+
+  // Find the closest {{ before the cursor
+  for (let i = cursorPosInLine - 1; i >= 0; i--) {
+    if (lineText.substring(i, i + 2) === "{{") {
+      varStartIndex = i;
+      break;
+    }
+  }
+
+  // Find the closest }} after the cursor
+  if (varStartIndex >= 0) {
+    for (let i = cursorPosInLine; i < lineText.length - 1; i++) {
+      if (lineText.substring(i, i + 2) === "}}") {
+        varEndIndex = i;
+        break;
+      }
+    }
+  }
+
+  // If we're inside {{}} pattern, show suggestions
+  if (varStartIndex >= 0 && varEndIndex >= 0) {
+    startCompletion(view);
+    return true;
+  }
+
+  // Case 2: Check for unclosed {{ pattern
+  let varStart = -1;
+  for (let i = cursorPosInLine - 1; i >= 0; i--) {
+    if (lineText.substring(i, i + 2) === "{{") {
+      varStart = i;
+      break;
+    }
+  }
+
+  // If we found {{ and it's not at the end of a completed variable
+  if (varStart >= 0) {
+    const afterVarStart = lineText.substring(varStart);
+    if (!afterVarStart.match(/\}\}/)) {
+      // No closing }} found after {{, so we're in a variable declaration
+      startCompletion(view);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorProps) => {
@@ -183,7 +298,7 @@ export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorPr
           icons: false,
         }),
 
-        // Custom keymap for autocompletion
+        // Custom keymap for autocompletion and checking for {{ after deleting
         keymap.of([
           {
             key: "{",
@@ -198,6 +313,22 @@ export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorPr
               return false;
             },
           },
+          {
+            key: "Backspace",
+            run: (view) => {
+              // After handling backspace normally, check if we're at a {{ position
+              setTimeout(() => checkForVariableStart(view), 10);
+              return false; // Don't actually handle the key, let default handler run
+            },
+          },
+          {
+            key: "Delete",
+            run: (view) => {
+              // After handling delete normally, check if we're at a {{ position
+              setTimeout(() => checkForVariableStart(view), 10);
+              return false; // Don't actually handle the key, let default handler run
+            },
+          },
         ]),
 
         // Update parent on changes
@@ -206,6 +337,15 @@ export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorPr
             const newValue = update.state.doc.toString();
             if (newValue !== value) {
               onChange(newValue);
+
+              // Check if we should show suggestions after any document change
+              if (update.transactions.some((tr) => tr.isUserEvent("input.type") || tr.isUserEvent("delete"))) {
+                setTimeout(() => {
+                  if (viewRef.current) {
+                    checkForVariableStart(viewRef.current);
+                  }
+                }, 10);
+              }
             }
           }
         }),
@@ -269,7 +409,7 @@ export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorPr
           icons: false,
         }),
 
-        // Custom keymap for autocompletion
+        // Custom keymap for autocompletion and checking for {{ after deleting
         keymap.of([
           {
             key: "{",
@@ -284,6 +424,22 @@ export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorPr
               return false;
             },
           },
+          {
+            key: "Backspace",
+            run: (view) => {
+              // After handling backspace normally, check if we're at a {{ position
+              setTimeout(() => checkForVariableStart(view), 10);
+              return false; // Don't actually handle the key, let default handler run
+            },
+          },
+          {
+            key: "Delete",
+            run: (view) => {
+              // After handling delete normally, check if we're at a {{ position
+              setTimeout(() => checkForVariableStart(view), 10);
+              return false; // Don't actually handle the key, let default handler run
+            },
+          },
         ]),
 
         // Update parent on changes
@@ -292,6 +448,15 @@ export const CMEditor = ({ value, onChange, suggestions, className }: CMEditorPr
             const newValue = update.state.doc.toString();
             if (newValue !== value) {
               onChange(newValue);
+
+              // Check if we should show suggestions after any document change
+              if (update.transactions.some((tr) => tr.isUserEvent("input.type") || tr.isUserEvent("delete"))) {
+                setTimeout(() => {
+                  if (viewRef.current) {
+                    checkForVariableStart(viewRef.current);
+                  }
+                }, 10);
+              }
             }
           }
         }),
