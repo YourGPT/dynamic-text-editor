@@ -57,27 +57,38 @@ const usePaint = ({ quillInstance, trigger = "{{", closingChar = "}}" }: UsePain
    * Apply highlighting to all template patterns in the text using the custom blot
    */
   const highlightTemplates = useCallback(() => {
-    if (!quillInstance || isHighlightingRef.current) return;
-
-    // Set the flag to prevent recursive calls
-    isHighlightingRef.current = true;
-
-    // Get the current text content
-    const text = quillInstance.getText();
-
-    // Skip if content hasn't changed to prevent loops
-    if (previousContentRef.current === text) {
-      isHighlightingRef.current = false;
+    if (!quillInstance || isHighlightingRef.current) {
+      console.log("[highlightTemplates] Skipped - quillInstance missing or already highlighting", {
+        hasQuill: !!quillInstance,
+        isHighlighting: isHighlightingRef.current,
+      });
       return;
     }
 
-    console.log("highlightTemplates called with new content");
+    // Set the flag to prevent recursive calls
+    isHighlightingRef.current = true;
+    console.log("[highlightTemplates] Starting highlighting process");
+
+    // Get the current text content
+    const text = quillInstance.getText();
+    console.log("[highlightTemplates] Text content:", text);
+    console.log("[highlightTemplates] Contains trigger pattern:", text.includes(trigger));
+
+    // Skip if content hasn't changed to prevent loops
+    // if (previousContentRef.current === text) {
+    //   console.log("[highlightTemplates] Content unchanged, skipping");
+    //   isHighlightingRef.current = false;
+    //   return;
+    // }
+
+    console.log("[highlightTemplates] Content changed, proceeding with highlighting");
     previousContentRef.current = text;
 
     try {
       // Escape special regex characters in the trigger and closing
       const escapedTrigger = trigger.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const escapedClosing = closingChar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      console.log("[highlightTemplates] Using pattern:", `${escapedTrigger}(.*?)${escapedClosing}`);
 
       // Create pattern to match templates with any content between delimiters
       const templatePattern = new RegExp(`${escapedTrigger}(.*?)${escapedClosing}`, "g");
@@ -85,36 +96,56 @@ const usePaint = ({ quillInstance, trigger = "{{", closingChar = "}}" }: UsePain
       // Temporarily disable the text-change handler
       const oldHandler = quillInstance.root.oninput;
       quillInstance.root.oninput = null;
+      console.log("[highlightTemplates] Disabled input handler temporarily");
 
       // Clear existing template formats first to avoid duplications
+      console.log("[highlightTemplates] Clearing existing template formats");
       quillInstance.formatText(0, text.length, "template-variable", false);
 
       // Find all template patterns in text and apply highlighting
       let match;
+      let matchCount = 0;
       templatePattern.lastIndex = 0; // Reset regex state
 
       while ((match = templatePattern.exec(text)) !== null) {
         const startIndex = match.index;
         const length = match[0].length;
+        matchCount++;
+
+        console.log(`[highlightTemplates] Found match #${matchCount}:`, {
+          text: match[0],
+          startIndex,
+          length,
+        });
 
         try {
           // Apply the custom template-variable format
           quillInstance.formatText(startIndex, length, "template-variable", true);
+          console.log(`[highlightTemplates] Applied formatting to match #${matchCount}`);
         } catch (error) {
-          console.error("Error applying template formatting:", error);
+          console.error(`[highlightTemplates] Error applying template formatting to match #${matchCount}:`, error);
         }
       }
+
+      console.log(`[highlightTemplates] Total matches found: ${matchCount}`);
 
       // Restore the input handler
       setTimeout(() => {
         quillInstance.root.oninput = oldHandler;
+        console.log("[highlightTemplates] Restored input handler");
       }, 0);
     } catch (error) {
-      console.error("Error in highlightTemplates:", error);
+      console.error("[highlightTemplates] Error in highlightTemplates:", error);
     } finally {
       // Always reset the flag when done
       setTimeout(() => {
         isHighlightingRef.current = false;
+        console.log("[highlightTemplates] Reset highlighting flag");
+
+        // Check if highlighting was successful
+        const finalHTML = quillInstance.root.innerHTML;
+        console.log("[highlightTemplates] Final HTML after highlighting:", finalHTML);
+        console.log("[highlightTemplates] Contains template classes:", finalHTML.includes("template-variable"));
       }, 50);
     }
   }, [quillInstance, trigger, closingChar]);

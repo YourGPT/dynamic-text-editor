@@ -1,4 +1,4 @@
-import React, { forwardRef, type ForwardRefRenderFunction, useEffect, useState, useRef, useCallback, useMemo } from "react";
+import React, { forwardRef, type ForwardRefRenderFunction, useEffect, useRef, useCallback, useMemo } from "react";
 import { useDynamicTextEditor } from "./hooks/useDynamicTextEditor";
 import type { DynamicTextEditorProps, DynamicTextEditorRef } from "./types";
 import Suggestions from "./Suggestions";
@@ -96,11 +96,11 @@ showdownConverter.makeHtml = function (text) {
 };
 
 const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, DynamicTextEditorProps> = (
-  { className = "", classNames, suggestions, renderItem, value, onChange, minSuggestionWidth, maxSuggestionWidth, maxSuggestionHeight, showCustomToolbar = false, suggestionTrigger = "{{", suggestionClosing = "}}", ...props },
+  { className = "", classNames, suggestions, renderItem, initialValue, onChange, minSuggestionWidth, maxSuggestionWidth, maxSuggestionHeight, suggestionTrigger = "{{", suggestionClosing = "}}", ...props },
   ref
 ) => {
   const lastHtmlValueRef = useRef<string>("");
-  const lastMarkdownValueRef = useRef<string>(value || "");
+  const lastMarkdownValueRef = useRef<string>(initialValue || "");
   const isSelfUpdateRef = useRef<boolean>(false);
   const selectionRef = useRef<{ index: number; length: number } | null>(null);
 
@@ -133,23 +133,23 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   // Convert markdown to HTML only when the value changes
   const htmlValue = useMemo(() => {
     // Handle empty/falsy values explicitly
-    if (value === "" || value === null || value === undefined) {
+    if (initialValue === "" || initialValue === null || initialValue === undefined) {
       lastMarkdownValueRef.current = "";
       lastHtmlValueRef.current = "";
       return "";
     }
 
-    if (value === lastMarkdownValueRef.current) {
+    if (initialValue === lastMarkdownValueRef.current) {
       return lastHtmlValueRef.current;
     }
 
-    lastMarkdownValueRef.current = value;
+    lastMarkdownValueRef.current = initialValue;
 
     // Special pre-processing for consecutive newlines
     // First, preserve template variables
     const templatePattern = /{{[^}]+}}/g;
     const templates: string[] = [];
-    const tempValue = value.replace(templatePattern, (match: string) => {
+    const tempValue = initialValue.replace(templatePattern, (match: string) => {
       templates.push(match);
       return `__TEMPLATE_${templates.length - 1}__`;
     });
@@ -175,7 +175,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
 
     lastHtmlValueRef.current = newHtml;
     return newHtml;
-  }, [value]);
+  }, [initialValue]);
 
   // Custom onChange handler without debouncing
   const handleChange = useCallback(
@@ -231,8 +231,8 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
     if (!quillInstance || isSelfUpdateRef.current) return;
 
     // Handle empty values explicitly
-    const valueIsEmpty = value === "" || value === null || value === undefined;
-    const shouldUpdate = valueIsEmpty || value !== lastMarkdownValueRef.current || lastHtmlValueRef.current !== quillInstance.root.innerHTML;
+    const valueIsEmpty = initialValue === "" || initialValue === null || initialValue === undefined;
+    const shouldUpdate = valueIsEmpty || initialValue !== lastMarkdownValueRef.current || lastHtmlValueRef.current !== quillInstance.root.innerHTML;
 
     if (!shouldUpdate) return;
 
@@ -248,7 +248,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
     }
 
     // Update refs
-    lastMarkdownValueRef.current = value || "";
+    lastMarkdownValueRef.current = initialValue || "";
 
     // For empty content, set the HTML value to empty as well
     if (valueIsEmpty) {
@@ -264,38 +264,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
     } else {
       isSelfUpdateRef.current = false;
     }
-  }, [quillInstance, value, htmlValue]);
-
-  // Format tracking state
-  const [formatState, setFormatState] = useState({
-    bold: false,
-    italic: false,
-    underline: false,
-    link: false,
-  });
-
-  // Update format state on selection change
-  useEffect(() => {
-    if (!quillInstance) return;
-
-    const selectionChangeHandler = () => {
-      const selection = quillInstance.getSelection();
-      if (selection) {
-        const format = quillInstance.getFormat(selection);
-        setFormatState({
-          bold: !!format.bold,
-          italic: !!format.italic,
-          underline: !!format.underline,
-          link: !!format.link,
-        });
-      }
-    };
-
-    quillInstance.on("selection-change", selectionChangeHandler);
-    return () => {
-      quillInstance.off("selection-change", selectionChangeHandler);
-    };
-  }, [quillInstance]);
+  }, [quillInstance, initialValue, htmlValue]);
 
   // Method to programmatically set value
   const setValue = useCallback(
@@ -322,7 +291,8 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
 
       if (quillInstance) {
         isSelfUpdateRef.current = true;
-        quillInstance.root.innerHTML = initialHtml;
+        // Use Quill's content API instead of directly setting innerHTML
+        quillInstance.clipboard.dangerouslyPasteHTML(initialHtml, "api");
         isSelfUpdateRef.current = false;
       }
 
@@ -332,58 +302,6 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
     },
     [quillInstance, onChange, formatMarkdown]
   );
-
-  // Format handlers for custom toolbar
-  const handleBold = () => {
-    if (!quillInstance) return;
-    const selection = quillInstance.getSelection();
-    if (selection) {
-      const format = quillInstance.getFormat(selection);
-      quillInstance.format("bold", !format.bold);
-      setFormatState((prev) => ({ ...prev, bold: !format.bold }));
-    } else {
-      quillInstance.focus();
-    }
-  };
-
-  const handleItalic = () => {
-    if (!quillInstance) return;
-    const selection = quillInstance.getSelection();
-    if (selection) {
-      const format = quillInstance.getFormat(selection);
-      quillInstance.format("italic", !format.italic);
-      setFormatState((prev) => ({ ...prev, italic: !format.italic }));
-    } else {
-      quillInstance.focus();
-    }
-  };
-
-  const handleUnderline = () => {
-    if (!quillInstance) return;
-    const selection = quillInstance.getSelection();
-    if (selection) {
-      const format = quillInstance.getFormat(selection);
-      quillInstance.format("underline", !format.underline);
-      setFormatState((prev) => ({ ...prev, underline: !format.underline }));
-    } else {
-      quillInstance.focus();
-    }
-  };
-
-  const handleLink = () => {
-    if (!quillInstance) return;
-    const selection = quillInstance.getSelection();
-    if (selection) {
-      const format = quillInstance.getFormat(selection);
-      const url = format.link ? "" : prompt("Enter URL", "https://");
-      if (url !== null) {
-        quillInstance.format("link", url);
-        setFormatState((prev) => ({ ...prev, link: !!url }));
-      }
-    } else {
-      quillInstance.focus();
-    }
-  };
 
   // Expose methods via ref
   React.useImperativeHandle(ref, () => ({
@@ -400,45 +318,39 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
   // Add this new useEffect after the quillInstance is initialized
   // This specifically handles the initial value when the component first mounts
   useEffect(() => {
-    if (!quillInstance || !value) return;
+    if (!quillInstance || !initialValue) return;
 
     // Only run this once on initialization
     if (lastHtmlValueRef.current === "") {
+      console.log("[Initial Load] Starting initial content load");
+      console.log("[Initial Load] Value:", initialValue);
+      console.log("[Initial Load] Contains templates:", initialValue.includes(suggestionTrigger));
+
       isSelfUpdateRef.current = true;
 
-      const initialHtml = formatMarkdown(value);
+      const initialHtml = formatMarkdown(initialValue);
 
-      console.log("initialHtml", initialHtml, value);
+      console.log("[Initial Load] Formatted HTML:", initialHtml);
+      console.log("[Initial Load] Contains template markers:", initialHtml.includes(suggestionTrigger));
 
-      quillInstance.root.innerHTML = initialHtml;
+      // Use Quill's content API instead of directly setting innerHTML
+      console.log("[Initial Load] Setting content with dangerouslyPasteHTML");
+      quillInstance.clipboard.dangerouslyPasteHTML(initialHtml, "api");
+
+      console.log("[Initial Load] Content set, HTML:", quillInstance.root.innerHTML);
+      console.log("[Initial Load] Contains template classes:", quillInstance.root.innerHTML.includes("template-variable"));
 
       // Update refs
       lastHtmlValueRef.current = initialHtml;
-      lastMarkdownValueRef.current = value;
+      lastMarkdownValueRef.current = initialValue;
 
       isSelfUpdateRef.current = false;
+      console.log("[Initial Load] Complete, reset self-update flag");
     }
-  }, [quillInstance, value, formatMarkdown]); // Added formatMarkdown to dependencies
+  }, [quillInstance, initialValue, formatMarkdown, suggestionTrigger]); // Added formatMarkdown to dependencies
 
   return (
     <EditorContainer className={`dynamic-text-editor ${className}`}>
-      {/* {showCustomToolbar && (
-        <CustomToolbar className="dynamic-text-editor-custom-toolbar">
-          <ToolbarButton type="button" onClick={handleBold} $active={formatState.bold} title="Bold">
-            <strong>B</strong>
-          </ToolbarButton>
-          <ToolbarButton type="button" onClick={handleItalic} $active={formatState.italic} title="Italic">
-            <em>I</em>
-          </ToolbarButton>
-          <ToolbarButton type="button" onClick={handleUnderline} $active={formatState.underline} title="Underline">
-            <u>U</u>
-          </ToolbarButton>
-          <ToolbarButton type="button" onClick={handleLink} $active={formatState.link} title="Link">
-            🔗
-          </ToolbarButton>
-        </CustomToolbar>
-      )} */}
-
       <EditorContent ref={quillRef} className={`dynamic-text-editor-container ${classNames?.container || ""}`} />
 
       <Suggestions
@@ -468,7 +380,7 @@ const DynamicTextEditorBase: ForwardRefRenderFunction<DynamicTextEditorRef, Dyna
 export const DynamicTextEditor = React.memo(forwardRef<DynamicTextEditorRef, DynamicTextEditorProps>(DynamicTextEditorBase), (prevProps, nextProps) => {
   // Custom comparison function
   return (
-    prevProps.value === nextProps.value &&
+    prevProps.initialValue === nextProps.initialValue &&
     prevProps.readOnly === nextProps.readOnly &&
     prevProps.suggestions === nextProps.suggestions &&
     prevProps.placeholder === nextProps.placeholder &&
@@ -578,44 +490,4 @@ const EditorContent = styled.div`
   .theme-bubble .ql-bubble .ql-tooltip {
     z-index: 1000;
   }
-`;
-
-const CustomToolbar = styled.div`
-  display: flex;
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
-  gap: 4px;
-  padding-bottom: 4px;
-`;
-
-const ToolbarButton = styled.button<{ $active?: boolean }>`
-  width: 30px;
-  height: 30px;
-  background-color: hsl(var(--background));
-  border: 1px solid hsl(var(--foreground) / 0.1);
-  border-radius: 3px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  transition: background-color 0.2s, border-color 0.2s;
-  color: hsl(var(--foreground));
-
-  &:hover {
-    background-color: hsl(var(--foreground) / 0.05);
-    border-color: hsl(var(--foreground) / 0.2);
-  }
-
-  &:active {
-    background-color: hsl(var(--foreground) / 0.1);
-  }
-
-  ${({ $active }) =>
-    $active &&
-    `
-    background-color: hsl(var(--primary) / 0.1);
-    border-color: hsl(var(--primary));
-    color: hsl(var(--primary));
-  `}
 `;

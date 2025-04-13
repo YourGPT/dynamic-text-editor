@@ -18,18 +18,12 @@ const Demo = () => {
     localStorage.setItem("editor-value", value);
   }, [value]);
 
-  useEffect(() => {
-    console.log(">>>>>>>>>>\n\n\n");
-    console.log("J VALUE", JSON.stringify(value));
-    console.log("\n\n\n<<<<<<<<<<");
-  }, [value]);
-
   return (
     <div className="dynamic-text-editor-demo">
       <button onClick={() => editorRef.current.setValue(DEFAULT_VAL)}>Add Value</button>
 
       <div>
-        <DynamicTextEditor ref={editorRef} onChange={setValue} value={value} suggestions={defaultSuggestions} classNames={{}} className="" showCustomToolbar />
+        <DynamicTextEditor ref={editorRef} onChange={setValue} initialValue={value} suggestions={defaultSuggestions} classNames={{}} className="" showCustomToolbar />
 
         <textarea style={{ width: "400px", height: "200px" }} value={value} onChange={(e) => setValue(e.target.value)} />
         {/* <div className="mt-4">

@@ -25,7 +25,8 @@ export interface EditorClassNames {
 }
 
 export interface DynamicTextEditorProps {
-  value: string;
+  value?: string;
+  initialValue?: string;
   onChange: (value: string) => void;
   suggestions: BaseEditorItem[];
   placeholder?: string;

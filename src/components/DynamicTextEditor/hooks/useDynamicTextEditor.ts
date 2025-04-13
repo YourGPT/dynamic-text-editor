@@ -61,7 +61,6 @@ export const useDynamicTextEditor = ({
   width = "100%",
   height = "auto",
   toolbar = true,
-  formats = ["bold", "italic", "underline", "blockquote", "code-block", "header", "list", "align"],
   onChange,
   onFocus,
   onBlur,
@@ -235,29 +234,62 @@ export const useDynamicTextEditor = ({
   const updateEditorState = useCallback(
     (content: string) => {
       try {
+        console.log("[setValue] Starting with content:", content);
+        console.log("[setValue] Contains templates:", content.includes(suggestionTrigger));
+
         // Set flag to indicate we're manually modifying text
         isModifyingText.current = true;
+        console.log("[setValue] Set isModifyingText flag:", isModifyingText.current);
 
-        // Set content in Quill
-        setContent(content);
+        // Set content in Quill - Using dangerouslyPasteHTML instead of setContent
+        if (quillInstance) {
+          console.log("[setValue] quillInstance exists, clearing content");
+          // Clear any existing content first
+          quillInstance.setText("");
 
-        // Update local state
-        setEditorState(content);
+          console.log("[setValue] Setting content with dangerouslyPasteHTML");
+          // Use Quill's clipboard API directly to better preserve formatting
+          quillInstance.clipboard.dangerouslyPasteHTML(content, "api");
 
-        // Apply highlighting
-        setTimeout(() => {
-          highlightTemplates();
-          // Reset flag after a small delay to ensure DOM operations are complete
+          console.log("[setValue] Content set, current HTML:", quillInstance.root.innerHTML);
+          console.log("[setValue] Contains template classes:", quillInstance.root.innerHTML.includes("template-variable"));
+
+          // Update local state
+          setEditorState(content);
+
+          // Important: Apply highlighting AFTER content is set
+          // Use a slightly longer delay to ensure DOM is updated
+          console.log("[setValue] Scheduling highlightTemplates");
           setTimeout(() => {
-            isModifyingText.current = false;
-          }, 50);
-        }, 10);
+            console.log("[setValue] Running highlightTemplates");
+            const beforeHTML = quillInstance.root.innerHTML;
+
+            highlightTemplates();
+
+            // Check if highlighting was applied
+            const afterHTML = quillInstance.root.innerHTML;
+            console.log("[setValue] Before highlighting:", beforeHTML);
+            console.log("[setValue] After highlighting:", afterHTML);
+            console.log("[setValue] Highlighting changed content:", beforeHTML !== afterHTML);
+
+            // Reset flag after highlighting is complete
+            setTimeout(() => {
+              console.log("[setValue] Resetting isModifyingText flag");
+              isModifyingText.current = false;
+            }, 100);
+          }, 100);
+        } else {
+          // If no quill instance, just update state
+          console.log("[setValue] No quillInstance, only updating state");
+          setEditorState(content);
+          isModifyingText.current = false;
+        }
       } catch (error) {
-        console.error("Error updating editor state:", error);
+        console.error("[setValue] Error updating editor state:", error);
         isModifyingText.current = false;
       }
     },
-    [setContent, highlightTemplates]
+    [quillInstance, highlightTemplates, suggestionTrigger]
   );
 
   return {
