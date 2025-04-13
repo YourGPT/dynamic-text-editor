@@ -72,19 +72,38 @@ const variableField = StateField.define<DecorationSet>({
 
 // React component for suggestion item
 const SuggestionItem = ({ label, detail, link, value }: { label: string; detail?: string; link?: string; value?: string }) => {
+  const handleLinkClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (link) {
+      // Open link in new tab
+      window.open(link, "_blank", "noopener,noreferrer");
+    }
+  };
+
   return (
     <div className="cm-suggestion-item">
       <div className="cm-suggestion-left">
         <div className="cm-suggestion-label">{label}</div>
         {detail && <div className="cm-suggestion-description">{detail}</div>}
       </div>
-      {/* <div className="cm-suggestion-right">
-        {link && (
-          <a href={link} target="_blank" rel="noopener noreferrer">
-            {link}
+      {link && (
+        <div className="cm-suggestion-right">
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleLinkClick}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            Docs
           </a>
-        )}
-      </div> */}
+        </div>
+      )}
     </div>
   );
 };
@@ -149,18 +168,13 @@ function variableCompletionSource(context: CompletionContext, suggestions: Array
         detail: s.description || "",
         apply: s.value, // Just replace what's between {{ and }}
         boost: 1,
-        // info: () => {
-        //   // Create DOM element for tooltip
-        //   const infoEl = document.createElement("div");
-
-        //   // Render React component to the DOM element
-        //   const root = createRoot(infoEl);
-        //   root.render(<SuggestionInfo label={s.value} detail={s.description} link={s.link} />);
-
-        //   return infoEl;
-        // },
         // Store source object for use in the renderer
-        source: s,
+        source: {
+          value: s.value,
+          label: s.label || s.value,
+          description: s.description || "",
+          link: s.link,
+        },
       })),
     };
   }
@@ -177,18 +191,13 @@ function variableCompletionSource(context: CompletionContext, suggestions: Array
       detail: s.description || "",
       apply: `${s.value}}}`,
       boost: 1,
-      //   info: () => {
-      //     // Create DOM element for tooltip
-      //     const infoEl = document.createElement("div");
-
-      //     // Render React component to the DOM element
-      //     const root = createRoot(infoEl);
-      //     root.render(<SuggestionInfo label={s.value} detail={s.description} link={s.link} />);
-
-      //     return infoEl;
-      //   },
       // Store source object for use in the renderer
-      source: s,
+      source: {
+        value: s.value,
+        label: s.label || s.value,
+        description: s.description || "",
+        link: s.link,
+      },
     })),
   };
 }
@@ -401,7 +410,22 @@ export const CMEditor = ({ value, onChange, suggestions, placeholder, className 
     viewRef.current = view;
     setIsInitialized(true);
 
+    // Add global event listener to handle clicks on autocomplete links
+    const handleTooltipClick = (e: MouseEvent) => {
+      // Find if the clicked element is a link inside our autocomplete tooltip
+      const target = e.target as HTMLElement;
+      if (target.tagName === "A" && target.closest(".cm-tooltip-autocomplete")) {
+        // If it's our link, prevent the default CodeMirror behavior
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    // Add the event listener to the document
+    document.addEventListener("mousedown", handleTooltipClick, true);
+
     return () => {
+      document.removeEventListener("mousedown", handleTooltipClick, true);
       view.destroy();
       viewRef.current = null;
       initializedRef.current = false;
@@ -511,6 +535,24 @@ export const CMEditor = ({ value, onChange, suggestions, placeholder, className 
     });
 
     currentView.setState(newState);
+
+    // Add global event listener to handle clicks on autocomplete links
+    const handleTooltipClick = (e: MouseEvent) => {
+      // Find if the clicked element is a link inside our autocomplete tooltip
+      const target = e.target as HTMLElement;
+      if (target.tagName === "A" && target.closest(".cm-tooltip-autocomplete")) {
+        // If it's our link, prevent the default CodeMirror behavior
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    // Add the event listener to the document
+    document.addEventListener("mousedown", handleTooltipClick, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handleTooltipClick, true);
+    };
   }, [suggestions, isInitialized]);
 
   // Update content when value prop changes
@@ -604,9 +646,33 @@ const EditorContainer = styled.div`
     .cm-suggestion-item {
       padding: 8px 10px;
       border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
 
       &:last-child {
         border-bottom: none;
+      }
+    }
+
+    .cm-suggestion-left {
+      flex: 1;
+    }
+
+    .cm-suggestion-right {
+      margin-left: 8px;
+
+      a {
+        font-size: 12px;
+        color: hsl(var(--primary));
+        text-decoration: none;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background-color: hsl(var(--primary) / 0.1);
+
+        &:hover {
+          background-color: hsl(var(--primary) / 0.2);
+        }
       }
     }
 
