@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { DynamicTextEditor, DynamicTextEditorRef } from "dynamic-prompt-editor";
+import { DynamicTextEditor, DynamicTextEditorRef, CMEditor } from "dynamic-prompt-editor";
 import { defaultSuggestions } from "./constants";
 import { Sun, Moon, PencilRuler } from "lucide-react";
 
@@ -40,7 +40,8 @@ function App() {
             <section className="bg-card rounded-lg p-6">
               <h3 className="text-xl font-medium mb-4">Editor</h3>
               <div className="text-sm">
-                <DynamicTextEditor
+                <CMEditor value={promptValue} onChange={setPromptValue} suggestions={defaultSuggestions} className="border border-border rounded-md p-2" />
+                {/* <DynamicTextEditor
                   ref={editorRef}
                   value={promptValue}
                   onChange={setPromptValue}
@@ -50,7 +51,7 @@ function App() {
                   }}
                   className=""
                   showCustomToolbar
-                />
+                /> */}
               </div>
             </section>
 
