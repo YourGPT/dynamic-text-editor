@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { DynamicTextEditor, DynamicTextEditorRef, CMEditor } from "dynamic-prompt-editor";
+import { DynamicTextEditorRef, CMEditor } from "dynamic-prompt-editor";
 import { defaultSuggestions } from "./constants";
 import { Sun, Moon, PencilRuler } from "lucide-react";
 
