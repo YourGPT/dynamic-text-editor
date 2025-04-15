@@ -14,6 +14,7 @@ interface CMEditorProps {
   suggestions: Array<{ value: string; label?: string; description?: string; link?: string }>;
   placeholder?: string;
   className?: string;
+  onBlur?: () => void;
 }
 
 // Create a highlight style for variables
@@ -71,7 +72,7 @@ const variableField = StateField.define<DecorationSet>({
 });
 
 // React component for suggestion item
-const SuggestionItem = ({ label, detail, link, value }: { label: string; detail?: string; link?: string; value?: string }) => {
+const SuggestionItem = ({ label, detail, link }: { label: string; detail?: string; link?: string }) => {
   const handleLinkClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -209,7 +210,7 @@ function renderSuggestionItem(completion: { label: string; detail?: string; sour
 
   // Create React root and render component
   const root = createRoot(container);
-  root.render(<SuggestionItem label={completion.label} detail={completion.detail} link={completion.source?.link} value={completion.source?.value} />);
+  root.render(<SuggestionItem label={completion.label} detail={completion.detail} link={completion.source?.link} />);
 
   return container;
 }
@@ -298,7 +299,7 @@ function placeholderExtension(placeholder: string) {
   });
 }
 
-export const CMEditor = ({ value, onChange, suggestions, placeholder, className }: CMEditorProps) => {
+export const CMEditor = ({ value, onChange, suggestions, placeholder, className, onBlur }: CMEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const initializedRef = useRef(false);
@@ -333,6 +334,16 @@ export const CMEditor = ({ value, onChange, suggestions, placeholder, className 
 
         // Variable highlighting
         variableField,
+
+        // Handle blur events
+        EditorView.domEventHandlers({
+          blur: () => {
+            if (onBlur) {
+              onBlur();
+            }
+            return false;
+          },
+        }),
 
         // Custom autocompletion
         autocompletion({
@@ -464,6 +475,16 @@ export const CMEditor = ({ value, onChange, suggestions, placeholder, className 
 
         // Variable highlighting
         variableField,
+
+        // Handle blur events
+        EditorView.domEventHandlers({
+          blur: () => {
+            if (onBlur) {
+              onBlur();
+            }
+            return false;
+          },
+        }),
 
         // Custom autocompletion with updated suggestions
         autocompletion({

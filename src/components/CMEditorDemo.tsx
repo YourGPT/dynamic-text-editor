@@ -10,6 +10,10 @@ export const CMEditorDemo = () => {
     setValue(newValue);
   };
 
+  const handleBlur = () => {
+    console.log("Editor lost focus");
+  };
+
   return (
     <Container>
       <h1>CodeMirror Variable Editor Demo</h1>
@@ -19,7 +23,7 @@ export const CMEditorDemo = () => {
       </InstructionsPanel>
 
       <EditorWrapper>
-        <CMEditor className="cmeditor" value={value} onChange={handleChange} suggestions={defaultSuggestions} placeholder="Enter your message here..." />
+        <CMEditor className="cmeditor" value={value} onChange={handleChange} suggestions={defaultSuggestions} placeholder="Enter your message here..." onBlur={handleBlur} />
       </EditorWrapper>
 
       <OutputSection>
@@ -106,41 +110,5 @@ const OutputSection = styled.div`
     padding: 10px;
     border-radius: 4px;
     border: 1px solid #eee;
-  }
-`;
-
-const VariablesSection = styled.div`
-  background-color: #e6f7ff;
-  border-radius: 4px;
-  padding: 15px;
-
-  h3 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    color: #1890ff;
-  }
-
-  ul {
-    margin: 0;
-    padding-left: 20px;
-  }
-
-  li {
-    margin-bottom: 10px;
-  }
-
-  strong {
-    color: #1890ff;
-  }
-
-  .variable-link {
-    display: block;
-    font-size: 12px;
-    margin-top: 3px;
-
-    a {
-      color: #1890ff;
-      text-decoration: underline;
-    }
   }
 `;

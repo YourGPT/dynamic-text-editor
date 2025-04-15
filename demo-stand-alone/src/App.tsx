@@ -40,7 +40,7 @@ function App() {
             <section className="bg-card rounded-lg p-6">
               <h3 className="text-xl font-medium mb-4">Editor</h3>
               <div className="text-sm">
-                <CMEditor value={promptValue} onChange={setPromptValue} suggestions={defaultSuggestions} className="border border-border rounded-md p-2" />
+                <CMEditor value={promptValue} onChange={setPromptValue} suggestions={defaultSuggestions} className="" placeholder="Ehhh" />
                 {/* <DynamicTextEditor
                   ref={editorRef}
                   value={promptValue}
