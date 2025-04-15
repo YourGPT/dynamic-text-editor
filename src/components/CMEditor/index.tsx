@@ -14,7 +14,7 @@ interface CMEditorProps {
   suggestions: Array<{ value: string; label?: string; description?: string; link?: string }>;
   placeholder?: string;
   className?: string;
-  onBlur?: () => void;
+  onBlur?: (event: { target: { value: string } }) => void;
 }
 
 // Create a highlight style for variables
@@ -339,7 +339,8 @@ export const CMEditor = ({ value, onChange, suggestions, placeholder, className,
         EditorView.domEventHandlers({
           blur: () => {
             if (onBlur) {
-              onBlur();
+              // Create an event-like object with the current value
+              onBlur({ target: { value: view.state.doc.toString() } });
             }
             return false;
           },
@@ -480,7 +481,8 @@ export const CMEditor = ({ value, onChange, suggestions, placeholder, className,
         EditorView.domEventHandlers({
           blur: () => {
             if (onBlur) {
-              onBlur();
+              // Create an event-like object with the current value
+              onBlur({ target: { value: currentView.state.doc.toString() } });
             }
             return false;
           },

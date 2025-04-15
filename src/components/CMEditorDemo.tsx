@@ -10,8 +10,8 @@ export const CMEditorDemo = () => {
     setValue(newValue);
   };
 
-  const handleBlur = () => {
-    console.log("Editor lost focus");
+  const handleBlur = (e: any) => {
+    console.log("Editor lost focus with value:", e.target.value);
   };
 
   return (

@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.17",
-    "dynamic-prompt-editor": "^2.4.0",
+    "dynamic-prompt-editor": "^2.4.3",
     "lucide-react": "^0.485.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
