@@ -1,12 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo, memo } from "react";
 import { createRoot } from "react-dom/client";
 import { styled } from "styled-components";
-import { EditorState, StateField, Transaction } from "@codemirror/state";
+import { EditorState, StateField, Transaction, Compartment } from "@codemirror/state";
 import { EditorView, Decoration, DecorationSet, keymap, WidgetType } from "@codemirror/view";
 import { autocompletion, CompletionContext, startCompletion, completionKeymap } from "@codemirror/autocomplete";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+
+// Define compartments for reconfigurable extensions
+const autocompleteCompartment = new Compartment();
+const eventHandlersCompartment = new Compartment();
+const changeListenerCompartment = new Compartment();
 
 interface CMEditorProps {
   value: string;
@@ -15,6 +20,8 @@ interface CMEditorProps {
   placeholder?: string;
   className?: string;
   onBlur?: (event: { target: { value: string } }) => void;
+  onKeyDown?: (event: KeyboardEvent) => void;
+  multiLine?: boolean; // Whether editor allows multiple lines (true) or acts like a single-line input (false)
 }
 
 // Create a highlight style for variables
@@ -35,7 +42,7 @@ function findVariables(text: string) {
   while ((match = variableRegex.exec(text)) !== null) {
     variables.push({
       from: match.index,
-      to: match.index + match[0].length,
+      to: match.index + (match[0]?.length || 0),
       text: match[1],
     });
   }
@@ -147,7 +154,7 @@ function variableCompletionSource(context: CompletionContext, suggestions: Array
 
   // Find the closest }} after the cursor
   if (varStartIndex >= 0) {
-    for (let i = cursorPosInLine; i < lineText.length - 1; i++) {
+    for (let i = cursorPosInLine; i < lineText?.length - 1; i++) {
       if (lineText.substring(i, i + 2) === "}}") {
         varEndIndex = i;
         break;
@@ -237,7 +244,7 @@ function checkForVariableStart(view: EditorView) {
 
   // Find the closest }} after the cursor
   if (varStartIndex >= 0) {
-    for (let i = cursorPosInLine; i < lineText.length - 1; i++) {
+    for (let i = cursorPosInLine; i < lineText?.length - 1; i++) {
       if (lineText.substring(i, i + 2) === "}}") {
         varEndIndex = i;
         break;
@@ -277,7 +284,7 @@ function checkForVariableStart(view: EditorView) {
 function placeholderExtension(placeholder: string) {
   return EditorView.decorations.of((view) => {
     // Only show placeholder when editor is empty
-    if (view.state.doc.length > 0) return Decoration.none;
+    if (view.state?.doc?.length > 0) return Decoration.none;
 
     // Create a placeholder decoration at position 0
     return Decoration.set([
@@ -299,32 +306,95 @@ function placeholderExtension(placeholder: string) {
   });
 }
 
-export const CMEditor = ({ value, onChange, suggestions, placeholder, className, onBlur }: CMEditorProps) => {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<EditorView | null>(null);
-  const initializedRef = useRef(false);
-  const [isInitialized, setIsInitialized] = useState(false);
+// Convert to memoized component with explicit props comparison
+export const CMEditor = memo(
+  ({ value, onChange, suggestions, placeholder, className, onBlur, onKeyDown, multiLine = true }: CMEditorProps) => {
+    const editorRef = useRef<HTMLDivElement>(null);
+    const viewRef = useRef<EditorView | null>(null);
+    const initializedRef = useRef(false);
+    const [isInitialized, setIsInitialized] = useState(false);
 
-  // Add source property to suggestions for accessing in renderer
-  const enhancedSuggestions = suggestions.map((s) => ({ ...s, source: s }));
+    // Memoize enhancedSuggestions to prevent recreating on every render
+    const enhancedSuggestions = useMemo(() => suggestions.map((s) => ({ ...s, source: s })), [suggestions]);
 
-  // Initialize editor only once
-  useEffect(() => {
-    if (!editorRef.current || initializedRef.current) return;
-    initializedRef.current = true;
+    // Initialize editor only once
+    useEffect(() => {
+      if (!editorRef.current || initializedRef.current) return;
+      initializedRef.current = true;
 
-    const state = EditorState.create({
-      doc: value,
-      extensions: [
+      const baseExtensions = [
         // Basic editor setup
-        EditorView.lineWrapping,
+        // Only apply line wrapping if not in single-line mode
+        multiLine !== false ? EditorView.lineWrapping : [],
         syntaxHighlighting(highlightStyle),
+
+        // Add custom styling for single-line mode
+        EditorView.theme({
+          "&.cm-editor": {
+            fontSize: "inherit",
+            fontFamily: "inherit",
+          },
+          "&.cm-editor.cm-single-line .cm-scroller": {
+            overflow: "hidden auto",
+          },
+          "&.cm-editor.cm-single-line .cm-content": {
+            minHeight: "40px",
+            height: "40px",
+          },
+          "&.cm-editor.cm-single-line .cm-line": {
+            padding: "0",
+            lineHeight: "38px",
+            display: "inline-block",
+          },
+        }),
 
         // Placeholder (if provided)
         placeholder ? placeholderExtension(placeholder) : [],
 
         // History extension for undo/redo functionality
         history(),
+
+        // Add a high-priority keymap handler for Enter to ensure we catch it first
+        keymap.of([
+          {
+            key: "Enter",
+            run: () => {
+              // Check if our external handler is registered
+              if (onKeyDown) {
+                // Create a synthetic keyboard event
+                const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+                // Call our handler directly
+                onKeyDown(event);
+                // If the handler prevented default, we prevent CodeMirror handling
+                if (event.defaultPrevented) {
+                  return true;
+                }
+              }
+
+              // If multiLine is false, always prevent new lines by handling the Enter key
+              if (multiLine === false) {
+                return true; // Prevents the default CodeMirror behavior (adding a new line)
+              }
+
+              // Return false to let CodeMirror handle it normally when multiLine is true
+              return false;
+            },
+            // Higher priority than default keymap to ensure we get it first
+            preventDefault: false,
+          },
+        ]),
+
+        // Ensure space key is not accidentally intercepted
+        keymap.of([
+          {
+            key: " ",
+            run: () => {
+              // Always return false to ensure space is handled normally
+              return false;
+            },
+            preventDefault: false,
+          },
+        ]),
 
         // Include keymaps for basic editing, history, and indentation
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
@@ -335,30 +405,86 @@ export const CMEditor = ({ value, onChange, suggestions, placeholder, className,
         // Variable highlighting
         variableField,
 
-        // Handle blur events
-        EditorView.domEventHandlers({
-          blur: () => {
-            if (onBlur) {
-              // Create an event-like object with the current value
-              onBlur({ target: { value: view.state.doc.toString() } });
-            }
-            return false;
-          },
-        }),
-
-        // Custom autocompletion
-        autocompletion({
-          override: [(ctx) => variableCompletionSource(ctx, enhancedSuggestions)],
-          activateOnTyping: true,
-          closeOnBlur: false,
-          addToOptions: [
-            {
-              render: renderSuggestionItem,
-              position: 20,
+        // Handle events in a compartment so they can be updated when props change
+        eventHandlersCompartment.of(
+          EditorView.domEventHandlers({
+            blur: () => {
+              if (onBlur) {
+                onBlur({ target: { value: viewRef.current?.state?.doc?.toString() || "" } });
+              }
+              return false;
             },
-          ],
-          icons: false,
-        }),
+            keydown: (event) => {
+              if (onKeyDown) {
+                onKeyDown(event);
+
+                // Explicitly prevent CodeMirror from handling Enter key
+                // This allows the parent component to fully control Enter behavior
+                if (event.key === "Enter" && !event.defaultPrevented) {
+                  // Parent didn't prevent default, check multiLine setting
+                  if (multiLine === false) {
+                    return true; // Prevent default when multiLine is false
+                  }
+                  return false;
+                }
+
+                // If parent prevented default on Enter, stop propagation here
+                if (event.key === "Enter" && event.defaultPrevented) {
+                  return true; // Prevent CodeMirror from handling it
+                }
+
+                // Ensure space key works properly
+                if (event.key === " ") {
+                  return false; // Let CodeMirror handle spaces normally
+                }
+              } else if (event.key === "Enter" && multiLine === false) {
+                // If there's no onKeyDown handler but multiLine is false, prevent new lines
+                return true;
+              } else if (event.key === " ") {
+                // Always let spaces work properly
+                return false;
+              }
+              return false; // Don't stop propagation, allow CodeMirror to handle the event too
+            },
+          })
+        ),
+
+        // Custom autocompletion in a compartment for easy reconfiguration
+        autocompleteCompartment.of(
+          autocompletion({
+            override: [(ctx) => variableCompletionSource(ctx, enhancedSuggestions)],
+            activateOnTyping: true,
+            closeOnBlur: false,
+            addToOptions: [
+              {
+                render: renderSuggestionItem,
+                position: 20,
+              },
+            ],
+            icons: false,
+          })
+        ),
+
+        // Update parent on changes - in a compartment so it can be reconfigured when onChange changes
+        changeListenerCompartment.of(
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) {
+              const newValue = update.state?.doc?.toString() || "";
+              if (newValue !== value) {
+                onChange(newValue);
+
+                // Check if we should show suggestions after any document change
+                if (update.transactions.some((tr) => tr.isUserEvent("input.type") || tr.isUserEvent("delete"))) {
+                  setTimeout(() => {
+                    if (viewRef.current) {
+                      checkForVariableStart(viewRef.current);
+                    }
+                  }, 10);
+                }
+              }
+            }
+          })
+        ),
 
         // Custom keymap for autocompletion and checking for {{ after deleting
         keymap.of([
@@ -392,216 +518,211 @@ export const CMEditor = ({ value, onChange, suggestions, placeholder, className,
             },
           },
         ]),
+      ];
 
-        // Update parent on changes
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            const newValue = update.state.doc.toString();
-            if (newValue !== value) {
-              onChange(newValue);
+      const state = EditorState.create({
+        doc: value,
+        extensions: baseExtensions,
+      });
 
-              // Check if we should show suggestions after any document change
-              if (update.transactions.some((tr) => tr.isUserEvent("input.type") || tr.isUserEvent("delete"))) {
-                setTimeout(() => {
-                  if (viewRef.current) {
-                    checkForVariableStart(viewRef.current);
-                  }
-                }, 10);
-              }
+      const view = new EditorView({
+        state,
+        parent: editorRef.current,
+      });
+
+      viewRef.current = view;
+      setIsInitialized(true);
+
+      // Add global event listener to handle clicks on autocomplete links
+      const handleTooltipClick = (e: MouseEvent) => {
+        // Find if the clicked element is a link inside our autocomplete tooltip
+        const target = e.target as HTMLElement;
+        if (target.tagName === "A" && target.closest(".cm-tooltip-autocomplete")) {
+          // If it's our link, prevent the default CodeMirror behavior
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+
+      // Add the event listener to the document
+      document.addEventListener("mousedown", handleTooltipClick, true);
+
+      return () => {
+        document.removeEventListener("mousedown", handleTooltipClick, true);
+        view.destroy();
+        viewRef.current = null;
+        initializedRef.current = false;
+      };
+    }, []);
+
+    // Update change handler when it changes
+    useEffect(() => {
+      if (!viewRef.current || !isInitialized) return;
+
+      const newChangeListener = EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+          const newValue = update.state?.doc?.toString() || "";
+          if (newValue !== value) {
+            onChange(newValue);
+
+            // Check if we should show suggestions after any document change
+            if (update.transactions.some((tr) => tr.isUserEvent("input.type") || tr.isUserEvent("delete"))) {
+              setTimeout(() => {
+                if (viewRef.current) {
+                  checkForVariableStart(viewRef.current);
+                }
+              }, 10);
             }
           }
-        }),
-      ],
-    });
-
-    const view = new EditorView({
-      state,
-      parent: editorRef.current,
-    });
-
-    viewRef.current = view;
-    setIsInitialized(true);
-
-    // Add global event listener to handle clicks on autocomplete links
-    const handleTooltipClick = (e: MouseEvent) => {
-      // Find if the clicked element is a link inside our autocomplete tooltip
-      const target = e.target as HTMLElement;
-      if (target.tagName === "A" && target.closest(".cm-tooltip-autocomplete")) {
-        // If it's our link, prevent the default CodeMirror behavior
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    // Add the event listener to the document
-    document.addEventListener("mousedown", handleTooltipClick, true);
-
-    return () => {
-      document.removeEventListener("mousedown", handleTooltipClick, true);
-      view.destroy();
-      viewRef.current = null;
-      initializedRef.current = false;
-    };
-  }, []); // Initialize only once
-
-  // Update suggestions when they change
-  useEffect(() => {
-    if (!viewRef.current || !isInitialized) return;
-
-    // We don't need to rebuild the whole editor, just recreate it with new config
-    // Since we can't easily reconfigure just the autocompletion extension
-    const currentView = viewRef.current;
-    const selection = currentView.state.selection;
-    const currentDoc = currentView.state.doc;
-
-    const newState = EditorState.create({
-      doc: currentDoc,
-      selection,
-      extensions: [
-        // Basic editor setup
-        EditorView.lineWrapping,
-        syntaxHighlighting(highlightStyle),
-
-        // Placeholder (if provided)
-        placeholder ? placeholderExtension(placeholder) : [],
-
-        // History extension for undo/redo functionality
-        history(),
-
-        // Include keymaps for basic editing, history, and indentation
-        keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
-
-        // Include keymap for completions
-        keymap.of(completionKeymap),
-
-        // Variable highlighting
-        variableField,
-
-        // Handle blur events
-        EditorView.domEventHandlers({
-          blur: () => {
-            if (onBlur) {
-              // Create an event-like object with the current value
-              onBlur({ target: { value: currentView.state.doc.toString() } });
-            }
-            return false;
-          },
-        }),
-
-        // Custom autocompletion with updated suggestions
-        autocompletion({
-          override: [(ctx) => variableCompletionSource(ctx, enhancedSuggestions)],
-          activateOnTyping: true,
-          closeOnBlur: false,
-          maxRenderedOptions: 10,
-          addToOptions: [
-            {
-              render: renderSuggestionItem,
-              position: 20,
-            },
-          ],
-          icons: false,
-        }),
-
-        // Custom keymap for autocompletion and checking for {{ after deleting
-        keymap.of([
-          {
-            key: "{",
-            run: (view) => {
-              const from = view.state.selection.main.from;
-              const textBefore = view.state.doc.sliceString(Math.max(0, from - 1), from);
-
-              if (textBefore === "{") {
-                // Show suggestions immediately when {{ is typed
-                setTimeout(() => startCompletion(view), 0);
-              }
-              return false;
-            },
-          },
-          {
-            key: "Backspace",
-            run: (view) => {
-              // After handling backspace normally, check if we're at a {{ position
-              setTimeout(() => checkForVariableStart(view), 10);
-              return false; // Don't actually handle the key, let default handler run
-            },
-          },
-          {
-            key: "Delete",
-            run: (view) => {
-              // After handling delete normally, check if we're at a {{ position
-              setTimeout(() => checkForVariableStart(view), 10);
-              return false; // Don't actually handle the key, let default handler run
-            },
-          },
-        ]),
-
-        // Update parent on changes
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            const newValue = update.state.doc.toString();
-            if (newValue !== value) {
-              onChange(newValue);
-
-              // Check if we should show suggestions after any document change
-              if (update.transactions.some((tr) => tr.isUserEvent("input.type") || tr.isUserEvent("delete"))) {
-                setTimeout(() => {
-                  if (viewRef.current) {
-                    checkForVariableStart(viewRef.current);
-                  }
-                }, 10);
-              }
-            }
-          }
-        }),
-      ],
-    });
-
-    currentView.setState(newState);
-
-    // Add global event listener to handle clicks on autocomplete links
-    const handleTooltipClick = (e: MouseEvent) => {
-      // Find if the clicked element is a link inside our autocomplete tooltip
-      const target = e.target as HTMLElement;
-      if (target.tagName === "A" && target.closest(".cm-tooltip-autocomplete")) {
-        // If it's our link, prevent the default CodeMirror behavior
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    // Add the event listener to the document
-    document.addEventListener("mousedown", handleTooltipClick, true);
-
-    return () => {
-      document.removeEventListener("mousedown", handleTooltipClick, true);
-    };
-  }, [suggestions, isInitialized]);
-
-  // Update content when value prop changes
-  useEffect(() => {
-    if (!viewRef.current || !isInitialized) return;
-
-    const currentValue = viewRef.current.state.doc.toString();
-    if (value !== currentValue) {
-      // Get selection to restore
-      const selection = viewRef.current.state.selection;
+        }
+      });
 
       viewRef.current.dispatch({
-        changes: {
-          from: 0,
-          to: viewRef.current.state.doc.length,
-          insert: value,
-        },
-        // Maintain selection and focus
-        selection,
-        scrollIntoView: true,
+        effects: changeListenerCompartment.reconfigure(newChangeListener),
       });
-    }
-  }, [value, isInitialized]);
+    }, [onChange, value, isInitialized]);
 
-  return <EditorContainer className={className} ref={editorRef} />;
-};
+    // Update event handlers when they change
+    useEffect(() => {
+      if (!viewRef.current || !isInitialized) return;
+
+      const newEventHandlers = EditorView.domEventHandlers({
+        blur: () => {
+          if (onBlur) {
+            onBlur({ target: { value: viewRef.current?.state?.doc?.toString() || "" } });
+          }
+          return false;
+        },
+        keydown: (event) => {
+          if (onKeyDown) {
+            onKeyDown(event);
+          }
+          return false;
+        },
+      });
+
+      viewRef.current.dispatch({
+        effects: eventHandlersCompartment.reconfigure(newEventHandlers),
+      });
+    }, [onBlur, onKeyDown, isInitialized]);
+
+    // Update suggestions using compartment when they change
+    useEffect(() => {
+      if (!viewRef.current || !isInitialized) return;
+
+      const newAutocomplete = autocompletion({
+        override: [(ctx) => variableCompletionSource(ctx, enhancedSuggestions)],
+        activateOnTyping: true,
+        closeOnBlur: false,
+        addToOptions: [
+          {
+            render: renderSuggestionItem,
+            position: 20,
+          },
+        ],
+        icons: false,
+      });
+
+      // Update only the autocompletion part using the compartment
+      viewRef.current.dispatch({
+        effects: autocompleteCompartment.reconfigure(newAutocomplete),
+      });
+    }, [enhancedSuggestions, isInitialized]); // Only when suggestions change
+
+    // Update content when value prop changes with safer selection handling
+    useEffect(() => {
+      if (!viewRef.current || !isInitialized) return;
+
+      const currentValue = viewRef.current.state?.doc?.toString() || "";
+      if (value !== currentValue) {
+        // Calculate a safe cursor position to prevent RangeError
+        const safePos = Math.min(value?.length || 0, viewRef.current.state?.doc?.length || 0);
+
+        viewRef.current.dispatch({
+          changes: {
+            from: 0,
+            to: viewRef.current.state?.doc?.length || 0,
+            insert: value || "",
+          },
+          // Use a safer selection
+          selection: { anchor: safePos },
+          scrollIntoView: true,
+        });
+      }
+    }, [value, isInitialized]);
+
+    // Apply single-line styling when multiLine is false
+    useEffect(() => {
+      if (!viewRef.current || !isInitialized) return;
+
+      // Add or remove single-line-input class based on multiLine prop
+      const editorElement = viewRef.current.dom;
+      if (editorElement) {
+        if (multiLine === false) {
+          editorElement.classList.add("cm-single-line");
+
+          // Force additional styling by applying inline styles if needed
+          editorElement.style.height = "40px";
+          editorElement.style.minHeight = "40px";
+          editorElement.style.maxHeight = "40px";
+
+          // Find the scroller element and force its style
+          const scroller = editorElement.querySelector(".cm-scroller");
+          if (scroller) {
+            (scroller as HTMLElement).style.height = "40px";
+            (scroller as HTMLElement).style.minHeight = "40px";
+            (scroller as HTMLElement).style.maxHeight = "40px";
+            (scroller as HTMLElement).style.overflowY = "hidden";
+          }
+
+          // Find the content element and force its style
+          const content = editorElement.querySelector(".cm-content");
+          if (content) {
+            (content as HTMLElement).style.height = "40px";
+            (content as HTMLElement).style.minHeight = "40px";
+            (content as HTMLElement).style.maxHeight = "40px";
+            (content as HTMLElement).style.whiteSpace = "pre";
+          }
+        } else {
+          editorElement.classList.remove("cm-single-line");
+          editorElement.style.height = "";
+          editorElement.style.minHeight = "";
+          editorElement.style.maxHeight = "";
+
+          // Reset styles of child elements
+          const scroller = editorElement.querySelector(".cm-scroller");
+          if (scroller) {
+            (scroller as HTMLElement).style.height = "";
+            (scroller as HTMLElement).style.minHeight = "";
+            (scroller as HTMLElement).style.maxHeight = "";
+            (scroller as HTMLElement).style.overflowY = "";
+          }
+
+          const content = editorElement.querySelector(".cm-content");
+          if (content) {
+            (content as HTMLElement).style.height = "";
+            (content as HTMLElement).style.minHeight = "";
+            (content as HTMLElement).style.maxHeight = "";
+            (content as HTMLElement).style.whiteSpace = "";
+          }
+        }
+      }
+    }, [multiLine, isInitialized]);
+
+    return <EditorContainer className={`${className || ""} ${multiLine === false ? "single-line" : ""}`} ref={editorRef} />;
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison function to determine if re-render is needed
+    return (
+      prevProps.value === nextProps.value &&
+      prevProps.className === nextProps.className &&
+      prevProps.placeholder === nextProps.placeholder &&
+      prevProps.onBlur === nextProps.onBlur &&
+      prevProps.onKeyDown === nextProps.onKeyDown &&
+      JSON.stringify(prevProps.suggestions) === JSON.stringify(nextProps.suggestions)
+    );
+  }
+);
 
 const EditorContainer = styled.div`
   .cm-focused {
@@ -612,6 +733,99 @@ const EditorContainer = styled.div`
     font-family: inherit;
   }
   .cm-editor {
+  }
+
+  /* Single-line mode styling */
+  &.single-line {
+    height: 40px;
+    min-height: 40px;
+    max-height: 40px;
+
+    .cm-editor {
+      height: 40px;
+      min-height: 40px;
+      max-height: 40px;
+      line-height: 38px; /* Slightly less than height to account for borders */
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .cm-scroller {
+      height: 40px;
+      min-height: 40px;
+      max-height: 40px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: pre; /* Changed from nowrap to pre to better handle spaces */
+      scrollbar-width: none; /* Firefox */
+      &::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Edge */
+      }
+    }
+
+    .cm-content {
+      height: 40px;
+      min-height: 40px;
+      max-height: 40px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: pre !important; /* Changed from nowrap to pre to better handle spaces */
+      padding: 0px;
+    }
+
+    .cm-line {
+      white-space: pre !important; /* Changed from nowrap to pre to better handle spaces */
+      display: inline-block;
+      height: 38px;
+      line-height: 38px;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+
+    /* Override any line wrapping */
+    .cm-lineWrapping {
+      white-space: pre !important; /* Changed from nowrap to pre */
+    }
+  }
+
+  /* Class applied directly to CodeMirror's DOM element */
+  .cm-single-line {
+    height: 40px;
+    min-height: 40px;
+    max-height: 40px;
+
+    .cm-content {
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: pre !important;
+      height: 40px;
+      min-height: 40px;
+      max-height: 40px;
+      padding: 0px;
+    }
+
+    .cm-scroller {
+      height: 40px;
+      min-height: 40px;
+      max-height: 40px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: pre !important;
+    }
+
+    .cm-line {
+      white-space: pre !important;
+      display: inline-block;
+      height: 38px;
+      line-height: 38px;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+
+    /* Force disable line wrapping in single-line mode */
+    &.cm-lineWrapping {
+      white-space: pre !important;
+    }
   }
 
   .cm-variable-highlight {

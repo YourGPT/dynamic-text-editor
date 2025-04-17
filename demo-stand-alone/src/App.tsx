@@ -5,6 +5,7 @@ import { Sun, Moon, PencilRuler } from "lucide-react";
 
 function App() {
   const [promptValue, setPromptValue] = useState<string>("Hello {{VISITOR.name}},\nWelcome to {{CONTACT.company}}!");
+  const [promptValue2, setPromptValue2] = useState<string>("Hello {{VISITOR.name}}");
   const editorRef = useRef<DynamicTextEditorRef>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(document.documentElement.classList.contains("dark"));
 
@@ -40,7 +41,9 @@ function App() {
             <section className="bg-card rounded-lg p-6">
               <h3 className="text-xl font-medium mb-4">Editor</h3>
               <div className="text-sm">
-                <CMEditor value={promptValue} onChange={setPromptValue} suggestions={defaultSuggestions} className="" placeholder="Ehhh" />
+                <CMEditor value={promptValue} onChange={setPromptValue} suggestions={defaultSuggestions} className="border border-border rounded-md" placeholder="Ehhh" />
+
+                <CMEditor value={promptValue2} onChange={setPromptValue2} suggestions={defaultSuggestions} className="border border-border rounded-md" placeholder="Ehhh" />
                 {/* <DynamicTextEditor
                   ref={editorRef}
                   value={promptValue}

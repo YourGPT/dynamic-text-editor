@@ -12,12 +12,14 @@ export default defineConfig({
     }),
   ],
   build: {
+    minify: false,
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
       name: "DynamicPromptEditor",
       formats: ["es"],
       fileName: "index",
     },
+
     rollupOptions: {
       external: ["react", "react-dom", "styled-components"],
       output: {
