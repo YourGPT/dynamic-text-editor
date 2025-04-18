@@ -833,6 +833,7 @@ const EditorContainer = styled.div`
     border-radius: 2px;
     color: hsl(var(--primary));
     padding: 0 2px;
+    word-break: break-all;
     /* font-weight: 500; */
   }
 
