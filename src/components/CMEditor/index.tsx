@@ -718,6 +718,7 @@ export const CMEditor = memo(
       prevProps.className === nextProps.className &&
       prevProps.placeholder === nextProps.placeholder &&
       prevProps.onBlur === nextProps.onBlur &&
+      prevProps.onChange === nextProps.onChange &&
       prevProps.onKeyDown === nextProps.onKeyDown &&
       JSON.stringify(prevProps.suggestions) === JSON.stringify(nextProps.suggestions)
     );
