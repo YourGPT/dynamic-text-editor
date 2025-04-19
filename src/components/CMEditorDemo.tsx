@@ -56,19 +56,19 @@ export const CMEditorDemo = () => {
 
       <h2>Multi-line Editor (default)</h2>
       <p>Press Shift+Enter for new line, Enter just submits</p>
-      <EditorWrapper>
-        <CMEditor
-          wordBreak
-          className="cmeditor"
-          value={value}
-          onChange={handleChange}
-          suggestions={defaultSuggestions}
-          placeholder="Enter your message here..."
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          multiLine={true} // Explicitly set to true (the default)
-        />
-      </EditorWrapper>
+      {/* <EditorWrapper> */}
+      <CMEditor
+        wordBreak
+        className="cmeditor"
+        value={value}
+        onChange={handleChange}
+        suggestions={defaultSuggestions}
+        placeholder="Enter your message here..."
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        multiLine={true} // Explicitly set to true (the default)
+      />
+      {/* </EditorWrapper> */}
 
       <h2>Single-line Editor</h2>
       <p>Acts like a regular input field, Enter never creates new lines</p>
@@ -165,9 +165,9 @@ const SingleLineWrapper = styled.div`
   align-items: center;
 
   .cmeditor {
-    height: 40px;
-    min-height: 40px;
-    max-height: 40px;
+    /* height: 40px; */
+    min-height: 400px;
+    /* max-height: 40px; */
     width: 100%;
     border-radius: 0px;
     /* Remove any potential margins or paddings */
@@ -177,9 +177,9 @@ const SingleLineWrapper = styled.div`
 
   /* Force single line mode appearance */
   .cm-editor {
-    height: 40px;
+    /* height: 40px;
     min-height: 40px;
-    max-height: 40px;
+    max-height: 40px; */
 
     .cm-line {
       height: 38px;

@@ -318,6 +318,14 @@ export const CMEditor = memo(
     // Memoize enhancedSuggestions to prevent recreating on every render
     const enhancedSuggestions = useMemo(() => suggestions.map((s) => ({ ...s, source: s })), [suggestions]);
 
+    // Handle clicks on the container to focus the editor
+    const handleContainerClick = (e: React.MouseEvent) => {
+      if (viewRef.current && e.target === e.currentTarget) {
+        // Only handle clicks directly on the container (not on editor content)
+        viewRef.current.focus();
+      }
+    };
+
     // Initialize editor only once
     useEffect(() => {
       if (!editorRef.current || initializedRef.current) return;
@@ -710,7 +718,7 @@ export const CMEditor = memo(
       }
     }, [multiLine, isInitialized]);
 
-    return <EditorContainer className={`${className || ""} ${multiLine === false ? "single-line" : ""} ${wordBreak ? "word-break" : ""}`} ref={editorRef} />;
+    return <EditorContainer className={`${className || ""} ${multiLine === false ? "single-line" : ""} ${wordBreak ? "word-break" : ""}`} ref={editorRef} onClick={handleContainerClick} />;
   },
   (prevProps, nextProps) => {
     // Custom comparison function to determine if re-render is needed
@@ -737,6 +745,11 @@ const EditorContainer = styled.div`
     font-family: inherit;
   }
   .cm-editor {
+  }
+
+  /* Cursor styling */
+  && .cm-content {
+    caret-color: hsl(var(--foreground)) !important;
   }
 
   /* Word break styling */
@@ -968,16 +981,16 @@ const EditorContainer = styled.div`
     li {
       padding: 0;
       &:hover {
-        background-color: #f5f5f5;
+        background-color: hsl(var(--primary) / 0.1);
       }
       &[aria-selected] {
-        background-color: #ffe6e6;
+        background-color: hsl(var(--primary) / 0.1);
       }
     }
   }
 
   .cm-tooltip-autocomplete li:hover {
-    background-color: #f5f5f5;
+    background-color: hsl(var(--primary) / 0.1);
   }
   && .cm-tooltip-autocomplete ul li[aria-selected] {
     background-color: hsl(var(--primary) / 0.1);
