@@ -22,6 +22,7 @@ interface CMEditorProps {
   onBlur?: (event: { target: { value: string } }) => void;
   onKeyDown?: (event: KeyboardEvent) => void;
   multiLine?: boolean; // Whether editor allows multiple lines (true) or acts like a single-line input (false)
+  wordBreak?: boolean; // Whether to allow word breaking
 }
 
 // Create a highlight style for variables
@@ -308,7 +309,7 @@ function placeholderExtension(placeholder: string) {
 
 // Convert to memoized component with explicit props comparison
 export const CMEditor = memo(
-  ({ value, onChange, suggestions, placeholder, className, onBlur, onKeyDown, multiLine = true }: CMEditorProps) => {
+  ({ value, onChange, suggestions, placeholder, className, onBlur, onKeyDown, multiLine = true, wordBreak = false }: CMEditorProps) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
     const initializedRef = useRef(false);
@@ -709,7 +710,7 @@ export const CMEditor = memo(
       }
     }, [multiLine, isInitialized]);
 
-    return <EditorContainer className={`${className || ""} ${multiLine === false ? "single-line" : ""}`} ref={editorRef} />;
+    return <EditorContainer className={`${className || ""} ${multiLine === false ? "single-line" : ""} ${wordBreak ? "word-break" : ""}`} ref={editorRef} />;
   },
   (prevProps, nextProps) => {
     // Custom comparison function to determine if re-render is needed
@@ -720,6 +721,8 @@ export const CMEditor = memo(
       prevProps.onBlur === nextProps.onBlur &&
       prevProps.onChange === nextProps.onChange &&
       prevProps.onKeyDown === nextProps.onKeyDown &&
+      prevProps.multiLine === nextProps.multiLine &&
+      prevProps.wordBreak === nextProps.wordBreak &&
       JSON.stringify(prevProps.suggestions) === JSON.stringify(nextProps.suggestions)
     );
   }
@@ -734,6 +737,17 @@ const EditorContainer = styled.div`
     font-family: inherit;
   }
   .cm-editor {
+  }
+
+  /* Word break styling */
+  &.word-break {
+    .cm-variable-highlight {
+      word-break: break-all;
+    }
+
+    .cm-line.cm-line.cm-line {
+      word-break: break-all;
+    }
   }
 
   /* Single-line mode styling */
@@ -834,7 +848,6 @@ const EditorContainer = styled.div`
     border-radius: 2px;
     color: hsl(var(--primary));
     padding: 0 2px;
-    word-break: break-all;
     /* font-weight: 500; */
   }
 

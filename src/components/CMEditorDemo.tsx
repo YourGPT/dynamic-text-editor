@@ -58,6 +58,7 @@ export const CMEditorDemo = () => {
       <p>Press Shift+Enter for new line, Enter just submits</p>
       <EditorWrapper>
         <CMEditor
+          wordBreak
           className="cmeditor"
           value={value}
           onChange={handleChange}
