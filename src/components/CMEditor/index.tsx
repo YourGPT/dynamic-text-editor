@@ -676,9 +676,10 @@ export const CMEditor = memo(
               onCharLimitExceed(wouldBeContent, beforeSelection + truncatedText + afterSelection);
             }
 
-            // Manually insert the truncated text
+            // Manually insert the truncated text and position cursor at end of insertion
             view.dispatch({
               changes: { from, to, insert: truncatedText },
+              selection: { anchor: from + truncatedText.length },
             });
             return true;
           }
@@ -702,6 +703,7 @@ export const CMEditor = memo(
                     to: selection.to,
                     insert: text,
                   },
+                  selection: { anchor: selection.from + text.length },
                 });
               }
               return true;
@@ -738,12 +740,14 @@ export const CMEditor = memo(
                     if (onCharLimitExceed) {
                       onCharLimitExceed(newContent, truncated);
                     }
+                    const lastValidCursor = Math.min(tr.selection?.main.head || 0, maxCharCount);
                     viewRef.current.dispatch({
                       changes: {
                         from: 0,
                         to: tr.newDoc.length,
                         insert: truncated,
                       },
+                      selection: { anchor: lastValidCursor },
                     });
                   }
                 }, 0);
