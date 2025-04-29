@@ -1,12 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { styled } from "styled-components";
-import { CMEditor } from "./CMEditor";
+import { CMEditor, CMEditorRef } from "./CMEditor";
 import { defaultSuggestions } from "../utils/constants";
 
-export const CMEditorDemo = () => {
+interface CMEditorDemoProps {
+  maxCharCount?: number;
+}
+
+export const CMEditorDemo = ({ maxCharCount }: CMEditorDemoProps) => {
   const [value, setValue] = useState("Hello {{username}},\n\nThank you for purchasing {{product}} for {{price}}.\nWe hope you enjoy your purchase!\n\nReaching us at {{email}} with any questions.\n\nRegards,\n{{company}}");
   const [value2, setValue2] = useState("Hello {{username}}, this is a single-line input");
   const [value3, setValue3] = useState("Hello {{username}}, try pressing Shift+Enter for a new line");
+  const [limitExceededMessage, setLimitExceededMessage] = useState<string>("");
+
+  const editorRef = useRef<CMEditorRef>(null);
 
   const [countdown, setCountdown] = useState(0);
 
@@ -45,19 +52,35 @@ export const CMEditorDemo = () => {
     // Allow Enter+Shift to create new lines (by not preventing default)
   };
 
+  const handleCharLimitExceed = (attempted: string, truncated: string) => {
+    const exceededBy = attempted.length - truncated.length;
+    setLimitExceededMessage(`Character limit exceeded by ${exceededBy} characters. Text was truncated.`);
+
+    // Clear the message after 3 seconds
+    setTimeout(() => {
+      setLimitExceededMessage("");
+    }, 3000);
+  };
+
   return (
     <Container>
       <h1>CodeMirror Variable Editor Demo</h1>
 
       <InstructionsPanel>
         <Textarea value={value} onChange={(e) => setValue(e.target.value)} />
+        {maxCharCount && (
+          <div>
+            Character limit: {value.length}/{maxCharCount}
+          </div>
+        )}
+        {limitExceededMessage && <LimitExceededMessage>{limitExceededMessage}</LimitExceededMessage>}
       </InstructionsPanel>
       {countdown}
 
       <h2>Multi-line Editor (default)</h2>
       <p>Press Shift+Enter for new line, Enter just submits</p>
-      {/* <EditorWrapper> */}
       <CMEditor
+        ref={editorRef}
         wordBreak
         className="cmeditor"
         value={value}
@@ -66,9 +89,12 @@ export const CMEditorDemo = () => {
         placeholder="Enter your message here..."
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        multiLine={true} // Explicitly set to true (the default)
+        multiLine={true}
+        maxCharCount={maxCharCount}
+        onCharLimitExceed={handleCharLimitExceed}
       />
-      {/* </EditorWrapper> */}
+
+      <button onClick={() => editorRef.current?.transformSelection((selectedText) => `**${selectedText}**`)}>Replace Selection</button>
 
       <h2>Single-line Editor</h2>
       <p>Acts like a regular input field, Enter never creates new lines</p>
@@ -80,19 +106,36 @@ export const CMEditorDemo = () => {
           suggestions={defaultSuggestions}
           placeholder="Single-line input"
           onBlur={handleBlur}
-          multiLine={false} // Set to false for single-line behavior
+          multiLine={false}
+          maxCharCount={maxCharCount}
+          onCharLimitExceed={handleCharLimitExceed}
         />
       </SingleLineWrapper>
 
       <h2>Multi-line with Custom Enter Handler</h2>
       <p>Same as first editor but shows the implementation</p>
       <EditorWrapper>
-        <CMEditor className="cmeditor" value={value3} onChange={handleChange3} suggestions={defaultSuggestions} placeholder="Press Shift+Enter for new line" onBlur={handleBlur} onKeyDown={handleKeyDown} />
+        <CMEditor
+          className="cmeditor"
+          value={value3}
+          onChange={handleChange3}
+          suggestions={defaultSuggestions}
+          placeholder="Press Shift+Enter for new line"
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          maxCharCount={maxCharCount}
+          onCharLimitExceed={handleCharLimitExceed}
+        />
       </EditorWrapper>
 
       <OutputSection>
         <h3>Current Value:</h3>
         <pre>{value}</pre>
+        {maxCharCount && (
+          <div>
+            Characters: {value.length}/{maxCharCount}
+          </div>
+        )}
       </OutputSection>
     </Container>
   );
@@ -216,4 +259,14 @@ const OutputSection = styled.div`
     border-radius: 4px;
     border: 1px solid #eee;
   }
+`;
+
+const LimitExceededMessage = styled.div`
+  margin-top: 8px;
+  padding: 8px;
+  background-color: #fff3f0;
+  border: 1px solid #ffccc7;
+  border-radius: 4px;
+  color: #cf1322;
+  font-size: 14px;
 `;

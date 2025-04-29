@@ -9,4 +9,5 @@ export type { DynamicTextEditorProps, DynamicTextEditorRef, BaseEditorItem } fro
 
 // Export CodeMirror Editor components
 export { CMEditor } from "./components/CMEditor";
+export type { CMEditorRef } from "./components/CMEditor";
 export { CMEditorDemo } from "./components/CMEditorDemo";

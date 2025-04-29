@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, memo } from "react";
+import { useEffect, useRef, useState, useMemo, memo, forwardRef, useImperativeHandle } from "react";
 import { createRoot } from "react-dom/client";
 import { styled } from "styled-components";
 import { EditorState, StateField, Transaction, Compartment } from "@codemirror/state";
@@ -23,6 +23,16 @@ interface CMEditorProps {
   onKeyDown?: (event: KeyboardEvent) => void;
   multiLine?: boolean; // Whether editor allows multiple lines (true) or acts like a single-line input (false)
   wordBreak?: boolean; // Whether to allow word breaking
+  maxCharCount?: number; // Maximum number of characters allowed
+  onCharLimitExceed?: (attemptedValue: string, truncatedValue: string) => void; // New callback prop
+}
+
+export interface CMEditorRef {
+  view: EditorView | null;
+  replaceSelection: (text: string) => string; // Return the text that was selected
+  transformSelection: (callback: (selectedText: string) => string) => string; // Transform the selected text with a callback
+  insertTextAtCursor: (text: string) => void;
+  focus: () => void;
 }
 
 // Create a highlight style for variables
@@ -307,13 +317,54 @@ function placeholderExtension(placeholder: string) {
   });
 }
 
-// Convert to memoized component with explicit props comparison
+// Convert to memoized component with explicit props comparison and forward ref
 export const CMEditor = memo(
-  ({ value, onChange, suggestions, placeholder, className, onBlur, onKeyDown, multiLine = true, wordBreak = false }: CMEditorProps) => {
+  forwardRef<CMEditorRef, CMEditorProps>(({ value, onChange, suggestions, placeholder, className, onBlur, onKeyDown, multiLine = true, wordBreak = false, maxCharCount, onCharLimitExceed }, ref) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
     const initializedRef = useRef(false);
     const [isInitialized, setIsInitialized] = useState(false);
+
+    // Expose methods via ref
+    useImperativeHandle(
+      ref,
+      () => ({
+        view: viewRef.current,
+        replaceSelection: (text: string) => {
+          if (!viewRef.current) return "";
+          const selection = viewRef.current.state.selection;
+          const selectedText = viewRef.current.state.sliceDoc(selection.main.from, selection.main.to);
+          viewRef.current.dispatch({
+            changes: { from: selection.main.from, to: selection.main.to, insert: text },
+            selection: { anchor: selection.main.from + text.length },
+          });
+          return selectedText;
+        },
+        transformSelection: (callback: (selectedText: string) => string) => {
+          if (!viewRef.current) return "";
+          const selection = viewRef.current.state.selection;
+          const selectedText = viewRef.current.state.sliceDoc(selection.main.from, selection.main.to);
+          const replacement = callback(selectedText);
+          viewRef.current.dispatch({
+            changes: { from: selection.main.from, to: selection.main.to, insert: replacement },
+            selection: { anchor: selection.main.from + replacement.length },
+          });
+          return selectedText;
+        },
+        insertTextAtCursor: (text: string) => {
+          if (!viewRef.current) return;
+          const selection = viewRef.current.state.selection;
+          viewRef.current.dispatch({
+            changes: { from: selection.main.from, insert: text },
+            selection: { anchor: selection.main.from + text.length },
+          });
+        },
+        focus: () => {
+          viewRef.current?.focus();
+        },
+      }),
+      [viewRef.current]
+    );
 
     // Memoize enhancedSuggestions to prevent recreating on every render
     const enhancedSuggestions = useMemo(() => suggestions.map((s) => ({ ...s, source: s })), [suggestions]);
@@ -367,29 +418,35 @@ export const CMEditor = memo(
         keymap.of([
           {
             key: "Enter",
-            run: () => {
-              // Check if our external handler is registered
+            run: (view) => {
+              // Check if adding a newline would exceed the limit
+              if (maxCharCount !== undefined) {
+                const currentLength = view.state.doc.length;
+                if (currentLength >= maxCharCount) {
+                  if (onCharLimitExceed) {
+                    const currentValue = view.state.doc.toString();
+                    onCharLimitExceed(currentValue + "\n", currentValue);
+                  }
+                  return true; // Prevent the enter key
+                }
+              }
+
               if (onKeyDown) {
-                // Create a synthetic keyboard event
                 const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
-                // Call our handler directly
                 onKeyDown(event);
-                // If the handler prevented default, we prevent CodeMirror handling
                 if (event.defaultPrevented) {
                   return true;
                 }
               }
 
-              // If multiLine is false, always prevent new lines by handling the Enter key
+              // If multiLine is false, always prevent new lines
               if (multiLine === false) {
-                return true; // Prevents the default CodeMirror behavior (adding a new line)
+                return true;
               }
 
-              // Return false to let CodeMirror handle it normally when multiLine is true
               return false;
             },
-            // Higher priority than default keymap to ensure we get it first
-            preventDefault: false,
+            preventDefault: true,
           },
         ]),
 
@@ -417,6 +474,55 @@ export const CMEditor = memo(
         // Handle events in a compartment so they can be updated when props change
         eventHandlersCompartment.of(
           EditorView.domEventHandlers({
+            paste: (event) => {
+              if (maxCharCount !== undefined && viewRef.current) {
+                event.preventDefault(); // Always prevent default paste
+
+                const clipboardData = event.clipboardData;
+                if (clipboardData) {
+                  const pastedText = clipboardData.getData("text");
+                  const currentValue = viewRef.current.state.doc.toString();
+                  const selection = viewRef.current.state.selection.main;
+
+                  // Calculate what the new value would be after paste
+                  const beforeSelection = currentValue.slice(0, selection.from);
+                  const afterSelection = currentValue.slice(selection.to);
+                  const wouldBeValue = beforeSelection + pastedText + afterSelection;
+
+                  if (wouldBeValue.length > maxCharCount) {
+                    // Calculate how much of the pasted text we can actually use
+                    const availableSpace = maxCharCount - (beforeSelection.length + afterSelection.length);
+                    const truncatedPaste = pastedText.slice(0, Math.max(0, availableSpace));
+                    const truncatedValue = beforeSelection + truncatedPaste + afterSelection;
+
+                    // Call the callback if provided
+                    if (onCharLimitExceed) {
+                      onCharLimitExceed(wouldBeValue, truncatedValue);
+                    }
+
+                    // Insert the truncated paste
+                    viewRef.current.dispatch({
+                      changes: {
+                        from: selection.from,
+                        to: selection.to,
+                        insert: truncatedPaste,
+                      },
+                    });
+                  } else {
+                    // If within limits, just insert the pasted text
+                    viewRef.current.dispatch({
+                      changes: {
+                        from: selection.from,
+                        to: selection.to,
+                        insert: pastedText,
+                      },
+                    });
+                  }
+                }
+                return true; // Prevent default paste behavior
+              }
+              return false; // Let default paste happen if no maxCharCount
+            },
             blur: () => {
               if (onBlur) {
                 onBlur({ target: { value: viewRef.current?.state?.doc?.toString() || "" } });
@@ -426,34 +532,8 @@ export const CMEditor = memo(
             keydown: (event) => {
               if (onKeyDown) {
                 onKeyDown(event);
-
-                // Explicitly prevent CodeMirror from handling Enter key
-                // This allows the parent component to fully control Enter behavior
-                if (event.key === "Enter" && !event.defaultPrevented) {
-                  // Parent didn't prevent default, check multiLine setting
-                  if (multiLine === false) {
-                    return true; // Prevent default when multiLine is false
-                  }
-                  return false;
-                }
-
-                // If parent prevented default on Enter, stop propagation here
-                if (event.key === "Enter" && event.defaultPrevented) {
-                  return true; // Prevent CodeMirror from handling it
-                }
-
-                // Ensure space key works properly
-                if (event.key === " ") {
-                  return false; // Let CodeMirror handle spaces normally
-                }
-              } else if (event.key === "Enter" && multiLine === false) {
-                // If there's no onKeyDown handler but multiLine is false, prevent new lines
-                return true;
-              } else if (event.key === " ") {
-                // Always let spaces work properly
-                return false;
               }
-              return false; // Don't stop propagation, allow CodeMirror to handle the event too
+              return false;
             },
           })
         ),
@@ -479,6 +559,28 @@ export const CMEditor = memo(
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
               const newValue = update.state?.doc?.toString() || "";
+
+              // Check if we're at or exceeding the character limit
+              if (maxCharCount !== undefined && newValue.length > maxCharCount) {
+                const truncatedValue = newValue.slice(0, maxCharCount);
+
+                // Call the callback if provided
+                if (onCharLimitExceed) {
+                  onCharLimitExceed(newValue, truncatedValue);
+                }
+
+                // Prevent the change by reverting to the truncated value
+                update.view.dispatch({
+                  changes: {
+                    from: 0,
+                    to: update.state.doc.length,
+                    insert: truncatedValue,
+                  },
+                });
+                onChange(truncatedValue);
+                return;
+              }
+
               if (newValue !== value) {
                 onChange(newValue);
 
@@ -527,6 +629,129 @@ export const CMEditor = memo(
             },
           },
         ]),
+
+        // Also add a keymap to prevent input when at character limit
+        keymap.of([
+          {
+            key: "Enter",
+            run: (view) => {
+              if (maxCharCount !== undefined && view.state.doc.length >= maxCharCount) {
+                return true; // Prevent input when at character limit
+              }
+              // ... rest of Enter key handling
+              return false;
+            },
+          },
+          {
+            any: (view, event) => {
+              if (maxCharCount !== undefined && view.state.doc.length >= maxCharCount && event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+                return true; // Prevent regular character input when at limit
+              }
+              return false;
+            },
+          },
+        ]),
+
+        // Add strict input handling for paste and other inputs
+        EditorView.inputHandler.of((view, from, to, text) => {
+          if (maxCharCount === undefined) return false;
+
+          const currentContent = view.state.doc.toString();
+          const beforeSelection = currentContent.slice(0, from);
+          const afterSelection = currentContent.slice(to);
+          const wouldBeContent = beforeSelection + text + afterSelection;
+
+          if (wouldBeContent.length > maxCharCount) {
+            // Calculate how much we can actually insert
+            const availableSpace = maxCharCount - (beforeSelection.length + afterSelection.length);
+            if (availableSpace <= 0) {
+              if (onCharLimitExceed) {
+                onCharLimitExceed(wouldBeContent, currentContent);
+              }
+              return true; // Prevent any input
+            }
+
+            const truncatedText = text.slice(0, availableSpace);
+            if (onCharLimitExceed) {
+              onCharLimitExceed(wouldBeContent, beforeSelection + truncatedText + afterSelection);
+            }
+
+            // Manually insert the truncated text
+            view.dispatch({
+              changes: { from, to, insert: truncatedText },
+            });
+            return true;
+          }
+          return false;
+        }),
+
+        // Prevent paste event from bypassing our input handler
+        EditorView.domEventHandlers({
+          paste: (event) => {
+            if (maxCharCount !== undefined) {
+              event.preventDefault();
+              const clipboardData = event.clipboardData;
+              if (clipboardData && viewRef.current) {
+                const text = clipboardData.getData("text");
+                const selection = viewRef.current.state.selection.main;
+
+                // Let our input handler deal with the actual insertion
+                viewRef.current.dispatch({
+                  changes: {
+                    from: selection.from,
+                    to: selection.to,
+                    insert: text,
+                  },
+                });
+              }
+              return true;
+            }
+            return false;
+          },
+          blur: () => {
+            if (onBlur) {
+              onBlur({ target: { value: viewRef.current?.state?.doc?.toString() || "" } });
+            }
+            return false;
+          },
+          keydown: (event) => {
+            if (onKeyDown) {
+              onKeyDown(event);
+            }
+            return false;
+          },
+        }),
+
+        // Add a state field to enforce the character limit
+        StateField.define({
+          create: () => null,
+          update: (value, tr) => {
+            if (maxCharCount === undefined) return null;
+
+            if (tr.docChanged) {
+              const newContent = tr.newDoc.toString();
+              if (newContent.length > maxCharCount) {
+                // If somehow the content exceeds the limit, truncate it
+                setTimeout(() => {
+                  if (viewRef.current) {
+                    const truncated = newContent.slice(0, maxCharCount);
+                    if (onCharLimitExceed) {
+                      onCharLimitExceed(newContent, truncated);
+                    }
+                    viewRef.current.dispatch({
+                      changes: {
+                        from: 0,
+                        to: tr.newDoc.length,
+                        insert: truncated,
+                      },
+                    });
+                  }
+                }, 0);
+              }
+            }
+            return null;
+          },
+        }),
       ];
 
       const state = EditorState.create({
@@ -644,6 +869,9 @@ export const CMEditor = memo(
 
       const currentValue = viewRef.current.state?.doc?.toString() || "";
       if (value !== currentValue) {
+        // Check if autocompletion is currently active
+        const autocompleteActive = viewRef.current.dom.querySelector(".cm-tooltip-autocomplete") !== null;
+
         // Calculate a safe cursor position to prevent RangeError
         const safePos = Math.min(value?.length || 0, viewRef.current.state?.doc?.length || 0);
 
@@ -657,6 +885,16 @@ export const CMEditor = memo(
           selection: { anchor: safePos },
           scrollIntoView: true,
         });
+
+        // If autocompletion was active, restore it after the update
+        if (autocompleteActive) {
+          // Use setTimeout to ensure the update has completed
+          setTimeout(() => {
+            if (viewRef.current) {
+              startCompletion(viewRef.current);
+            }
+          }, 10);
+        }
       }
     }, [value, isInitialized]);
 
@@ -719,7 +957,7 @@ export const CMEditor = memo(
     }, [multiLine, isInitialized]);
 
     return <EditorContainer className={`${className || ""} ${multiLine === false ? "single-line" : ""} ${wordBreak ? "word-break" : ""}`} ref={editorRef} onClick={handleContainerClick} />;
-  },
+  }),
   (prevProps, nextProps) => {
     // Custom comparison function to determine if re-render is needed
     return (
@@ -731,7 +969,8 @@ export const CMEditor = memo(
       prevProps.onKeyDown === nextProps.onKeyDown &&
       prevProps.multiLine === nextProps.multiLine &&
       prevProps.wordBreak === nextProps.wordBreak &&
-      JSON.stringify(prevProps.suggestions) === JSON.stringify(nextProps.suggestions)
+      JSON.stringify(prevProps.suggestions) === JSON.stringify(nextProps.suggestions) &&
+      prevProps.maxCharCount === nextProps.maxCharCount
     );
   }
 );

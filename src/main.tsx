@@ -1,7 +1,6 @@
 import { StrictMode, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { DynamicTextEditor } from "./components/DynamicTextEditor";
-import { CMEditor } from "./components/CMEditor";
 import type { DynamicTextEditorRef } from "./components/DynamicTextEditor/types";
 
 import "./utils/demo.css";
@@ -17,8 +16,7 @@ const Demo = () => {
     return stored || DEFAULT_VAL;
   });
 
-  // Simple value for CMEditor demo
-  const [cmValue, setCmValue] = useState("Welcome, {{username}}! Try typing {{ to see suggestions.");
+  const maxCharCount = 100; // Set a 100 character limit
 
   useEffect(() => {
     localStorage.setItem("editor-value", value);
@@ -30,16 +28,16 @@ const Demo = () => {
 
       <div style={{ marginBottom: "40px" }}>
         <h2>Full Demo Component</h2>
-        <CMEditorDemo />
+        <CMEditorDemo maxCharCount={maxCharCount} />
       </div>
 
-      <h2>Original DynamicTextEditor</h2>
-      <button onClick={() => editorRef.current?.setValue(DEFAULT_VAL)}>Add Value</button>
+      {/* <h2>Original DynamicTextEditor</h2>
+      <button onClick={() => editorRef.current?.setValue(DEFAULT_VAL)}>Add Value</button> */}
 
       <div>
-        <DynamicTextEditor ref={editorRef} onChange={setValue} initialValue={value} suggestions={defaultSuggestions} classNames={{}} className="" showCustomToolbar />
+        {/* <DynamicTextEditor ref={editorRef} onChange={setValue} initialValue={value} suggestions={defaultSuggestions} classNames={{}} className="" showCustomToolbar /> */}
 
-        <textarea style={{ width: "400px", height: "200px" }} value={value} onChange={(e) => setValue(e.target.value)} />
+        {/* <textarea style={{ width: "400px", height: "200px" }} value={value} onChange={(e) => setValue(e.target.value)} /> */}
         {/* <div className="mt-4">
           <h4 className="" style={{ whiteSpace: "pre-wrap" }}>
             Value:
