@@ -488,9 +488,13 @@ export const CMEditor = memo(
                   const selection = viewRef.current.state.selection.main;
                   console.log("[CMEditor] Current selection:", { from: selection.from, to: selection.to });
 
+                  // Ensure valid selection points
+                  const safeFrom = Math.max(0, Math.min(selection.from, currentValue.length));
+                  const safeTo = Math.max(0, Math.min(selection.to, currentValue.length));
+
                   // Calculate what the new value would be after paste
-                  const beforeSelection = currentValue.slice(0, selection.from);
-                  const afterSelection = currentValue.slice(selection.to);
+                  const beforeSelection = currentValue.slice(0, safeFrom);
+                  const afterSelection = currentValue.slice(safeTo);
                   const wouldBeValue = beforeSelection + pastedText + afterSelection;
                   console.log("[CMEditor] Would be value length:", wouldBeValue.length);
 
@@ -507,24 +511,26 @@ export const CMEditor = memo(
                       onCharLimitExceed(wouldBeValue, truncatedValue);
                     }
 
-                    // Insert the truncated paste
+                    // Insert the truncated paste with safe selection points
                     viewRef.current.dispatch({
                       changes: {
-                        from: selection.from,
-                        to: selection.to,
+                        from: safeFrom,
+                        to: safeTo,
                         insert: truncatedPaste,
                       },
+                      selection: { anchor: safeFrom + truncatedPaste.length },
                     });
                     console.log("[CMEditor] Inserted truncated paste:", truncatedPaste);
                   } else {
                     console.log("[CMEditor] Inserting full pasted text");
-                    // If within limits, just insert the pasted text
+                    // If within limits, just insert the pasted text with safe selection points
                     viewRef.current.dispatch({
                       changes: {
-                        from: selection.from,
-                        to: selection.to,
+                        from: safeFrom,
+                        to: safeTo,
                         insert: pastedText,
                       },
+                      selection: { anchor: safeFrom + pastedText.length },
                     });
                   }
                 } else {
@@ -533,7 +539,7 @@ export const CMEditor = memo(
                 return true; // Prevent default paste behavior
               }
               console.log("[CMEditor] No maxCharCount, allowing default paste");
-              return false; // Let default paste happen if no maxCharCount
+              return false;
             },
             blur: () => {
               if (onBlur) {
