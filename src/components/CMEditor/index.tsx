@@ -475,21 +475,27 @@ export const CMEditor = memo(
         eventHandlersCompartment.of(
           EditorView.domEventHandlers({
             paste: (event) => {
+              console.log("[CMEditor] Paste event triggered in eventHandlersCompartment");
               if (maxCharCount !== undefined && viewRef.current) {
+                console.log("[CMEditor] Handling paste with maxCharCount:", maxCharCount);
                 event.preventDefault(); // Always prevent default paste
 
                 const clipboardData = event.clipboardData;
                 if (clipboardData) {
                   const pastedText = clipboardData.getData("text");
+                  console.log("[CMEditor] Pasted text:", pastedText);
                   const currentValue = viewRef.current.state.doc.toString();
                   const selection = viewRef.current.state.selection.main;
+                  console.log("[CMEditor] Current selection:", { from: selection.from, to: selection.to });
 
                   // Calculate what the new value would be after paste
                   const beforeSelection = currentValue.slice(0, selection.from);
                   const afterSelection = currentValue.slice(selection.to);
                   const wouldBeValue = beforeSelection + pastedText + afterSelection;
+                  console.log("[CMEditor] Would be value length:", wouldBeValue.length);
 
                   if (wouldBeValue.length > maxCharCount) {
+                    console.log("[CMEditor] Paste would exceed maxCharCount");
                     // Calculate how much of the pasted text we can actually use
                     const availableSpace = maxCharCount - (beforeSelection.length + afterSelection.length);
                     const truncatedPaste = pastedText.slice(0, Math.max(0, availableSpace));
@@ -497,6 +503,7 @@ export const CMEditor = memo(
 
                     // Call the callback if provided
                     if (onCharLimitExceed) {
+                      console.log("[CMEditor] Calling onCharLimitExceed with truncated value");
                       onCharLimitExceed(wouldBeValue, truncatedValue);
                     }
 
@@ -508,7 +515,9 @@ export const CMEditor = memo(
                         insert: truncatedPaste,
                       },
                     });
+                    console.log("[CMEditor] Inserted truncated paste:", truncatedPaste);
                   } else {
+                    console.log("[CMEditor] Inserting full pasted text");
                     // If within limits, just insert the pasted text
                     viewRef.current.dispatch({
                       changes: {
@@ -518,9 +527,12 @@ export const CMEditor = memo(
                       },
                     });
                   }
+                } else {
+                  console.warn("[CMEditor] No clipboard data available");
                 }
                 return true; // Prevent default paste behavior
               }
+              console.log("[CMEditor] No maxCharCount, allowing default paste");
               return false; // Let default paste happen if no maxCharCount
             },
             blur: () => {
@@ -654,17 +666,24 @@ export const CMEditor = memo(
 
         // Add strict input handling for paste and other inputs
         EditorView.inputHandler.of((view, from, to, text) => {
-          if (maxCharCount === undefined) return false;
+          console.log("[CMEditor] Input handler called with text:", text);
+          if (maxCharCount === undefined) {
+            console.log("[CMEditor] No maxCharCount in strict input handler");
+            return false;
+          }
 
           const currentContent = view.state.doc.toString();
           const beforeSelection = currentContent.slice(0, from);
           const afterSelection = currentContent.slice(to);
           const wouldBeContent = beforeSelection + text + afterSelection;
+          console.log("[CMEditor] Would be content length:", wouldBeContent.length, "maxCharCount:", maxCharCount);
 
           if (wouldBeContent.length > maxCharCount) {
+            console.log("[CMEditor] Content would exceed maxCharCount");
             // Calculate how much we can actually insert
             const availableSpace = maxCharCount - (beforeSelection.length + afterSelection.length);
             if (availableSpace <= 0) {
+              console.log("[CMEditor] No space available for input");
               if (onCharLimitExceed) {
                 onCharLimitExceed(wouldBeContent, currentContent);
               }
@@ -672,6 +691,7 @@ export const CMEditor = memo(
             }
 
             const truncatedText = text.slice(0, availableSpace);
+            console.log("[CMEditor] Using truncated text:", truncatedText);
             if (onCharLimitExceed) {
               onCharLimitExceed(wouldBeContent, beforeSelection + truncatedText + afterSelection);
             }
@@ -681,20 +701,26 @@ export const CMEditor = memo(
               changes: { from, to, insert: truncatedText },
               selection: { anchor: from + truncatedText.length },
             });
+            console.log("[CMEditor] Dispatched truncated text changes");
             return true;
           }
+          console.log("[CMEditor] Content within limits, allowing default handling");
           return false;
         }),
 
         // Prevent paste event from bypassing our input handler
         EditorView.domEventHandlers({
           paste: (event) => {
+            console.log("[CMEditor] Paste event triggered in input handler");
             if (maxCharCount !== undefined) {
+              console.log("[CMEditor] Handling paste in input handler with maxCharCount:", maxCharCount);
               event.preventDefault();
               const clipboardData = event.clipboardData;
               if (clipboardData && viewRef.current) {
                 const text = clipboardData.getData("text");
+                console.log("[CMEditor] Got text from clipboard:", text);
                 const selection = viewRef.current.state.selection.main;
+                console.log("[CMEditor] Current selection:", { from: selection.from, to: selection.to });
 
                 // Let our input handler deal with the actual insertion
                 viewRef.current.dispatch({
@@ -705,9 +731,13 @@ export const CMEditor = memo(
                   },
                   selection: { anchor: selection.from + text.length },
                 });
+                console.log("[CMEditor] Dispatched paste changes");
+              } else {
+                console.warn("[CMEditor] No clipboard data or view reference available");
               }
               return true;
             }
+            console.log("[CMEditor] No maxCharCount in input handler, allowing default paste");
             return false;
           },
           blur: () => {
